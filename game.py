@@ -1,7 +1,7 @@
 import pygame
 
 CHARACTER_SIZE = 30, 30
-G = 0  # Ускорение свободного падения (pix/tick)
+G = 1  # Ускорение свободного падения (pix/tick)
 
 pygame.init()
 
@@ -55,7 +55,8 @@ class Enemy(pygame.sprite.Sprite):
             else:
                 break
 
-        self.speed[1] += G
+        if not self.can_jump():
+            self.speed[1] += G
 
         if pygame.sprite.spritecollideany(self, ladders):
             self.climbing = True
@@ -93,26 +94,16 @@ while running:
                     enemy = Enemy(en, event.pos)
         if enemy:
             if pygame.key.get_pressed()[pygame.K_LEFT]:
-                enemy.speed[0] -= 10
-                enemy.move()
-                enemy.speed[0] += 10
+                enemy.speed[0] -= 1
             elif pygame.key.get_pressed()[pygame.K_RIGHT]:
-                enemy.speed[0] += 10
-                enemy.move()
-                enemy.speed[0] -= 10
+                enemy.speed[0] += 1
             elif pygame.key.get_pressed()[pygame.K_SPACE] and enemy.can_jump():
-                enemy.speed[1] -= 30
-                enemy.move()
-                enemy.speed[1] += 30
+                enemy.speed[1] -= 3
             elif enemy.climbing:
                 if pygame.key.get_pressed()[pygame.K_UP]:
-                    enemy.speed[1] -= 10
-                    enemy.move()
-                    enemy.speed[1] += 10
+                    enemy.speed[1] -= 1
                 elif pygame.key.get_pressed()[pygame.K_DOWN]:
-                    enemy.speed[1] += 10
-                    enemy.move()
-                    enemy.speed[1] -= 10
+                    enemy.speed[1] += 1
 
     if enemy: enemy.move()
     screen.fill((255, 255, 255))

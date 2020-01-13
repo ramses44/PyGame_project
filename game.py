@@ -1,14 +1,16 @@
 import pygame
 
+CHARACTER_SIZE = 50, 50
+
 pygame.init()
 
-size = width, height = 500, 500
+size = width, height = 1000, 600
 
 screen = pygame.display.set_mode(size)
 running = True
 
 platforms = pygame.sprite.Group()
-ladders = pygame.sprite.Group()
+barrels = pygame.sprite.Group()
 
 
 class Platform(pygame.sprite.Sprite):
@@ -34,16 +36,13 @@ class Enemy(pygame.sprite.Sprite):
         pygame.draw.rect(self.image, (0, 0, 255), (0, 0, 20, 20))
         self.rect = pygame.Rect(*pos, 20, 20)
         self.climbing = False
+        self.speed = 0, 0
 
-    def move(self, x, y, falling=False):
-        self.rect = self.rect.move(x, y)
-        q = pygame.sprite.spritecollideany(self, platforms)
-        if q and falling:
-            self.rect = self.rect.move(0, -y)
-        if pygame.sprite.spritecollideany(self, ladders):
-            self.climbing = True
-        else:
-            self.climbing = False
+    def move(self):
+        for x in range(self.spped[0]):
+            if not pygame.sprite.spritecollideany(self, platforms):
+
+        self.rect = self.rect.move
 
 
 screen.fill((255, 255, 255))
@@ -75,6 +74,8 @@ while running:
                     enemy.move(10, 0)
                 elif event.key == 276:
                     enemy.move(-10, 0)
+                elif event.key == 32:
+                    enemy.move(0, -20)
                 elif enemy.climbing:
                     if event.key == 274:
                         enemy.move(0, 10)

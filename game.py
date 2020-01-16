@@ -1,7 +1,7 @@
 import pygame
 
 CHARACTER_SIZE = 30, 30
-FALLING_SPEED = 10  # Скорость падения (pixels/tick)
+FALLING_SPEED = 2  # Скорость падения (pixels/tick)
 
 pygame.init()
 
@@ -53,17 +53,19 @@ class Enemy(pygame.sprite.Sprite):
         delta = 1 if y > 0 else -1
         for _ in range(*sorted((y, 0))):
             self.rect = self.rect.move(0, delta)
-            if pygame.sprite.spritecollideany(self, platforms):
+            if pygame.sprite.spritecollideany(self, platforms) and not self.climbing:
                 self.rect = self.rect.move(0, -delta)
                 break
             if pygame.sprite.spritecollideany(self, barrels):
                 return True
-            if pygame.sprite.spritecollideany(self, ladders):
+            if pygame.sprite.spritecollideany(self, ladders) and not self.climbing:
                 self.climbing = True
                 break
 
         if pygame.sprite.spritecollideany(self, ladders):
             self.climbing = True
+        else:
+            self.climbing = False
 
     def can_jump(self):
         """Проверка, есть ли от чего оттолкнуться для прыжка"""
@@ -112,12 +114,12 @@ while running:
                 elif pygame.key.get_pressed()[pygame.K_DOWN]:
                     enemy.move(y=10)
 
-    if enemy: enemy.move(y=10)
+    if enemy and not enemy.climbing: enemy.move(y=FALLING_SPEED)
     screen.fill((255, 255, 255))
     platforms.draw(screen)
     ladders.draw(screen)
     en.draw(screen)
     pygame.display.flip()
-    clock.tick(10)
+    clock.tick(60)
 
 pygame.quit()

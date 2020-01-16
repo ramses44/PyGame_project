@@ -1,13 +1,17 @@
 import pygame
 
+CHARACTER_SIZE = 30, 30
+FALLING_SPEED = 10  # Скорость падения (pixels/tick)
+
 pygame.init()
 
-size = width, height = 500, 500
+size = width, height = 1000, 600
 
 screen = pygame.display.set_mode(size)
 running = True
 
 platforms = pygame.sprite.Group()
+barrels = pygame.sprite.Group()
 ladders = pygame.sprite.Group()
 
 
@@ -30,20 +34,45 @@ class Ladder(pygame.sprite.Sprite):
 class Enemy(pygame.sprite.Sprite):
     def __init__(self, group, pos):
         super().__init__(group)
-        self.image = pygame.Surface((20, 20))
-        pygame.draw.rect(self.image, (0, 0, 255), (0, 0, 20, 20))
-        self.rect = pygame.Rect(*pos, 20, 20)
+        self.image = pygame.Surface(CHARACTER_SIZE)
+        pygame.draw.rect(self.image, (0, 0, 255), (0, 0, *CHARACTER_SIZE))
+        self.rect = pygame.Rect(*pos, *CHARACTER_SIZE)
         self.climbing = False
 
-    def move(self, x, y, falling=False):
-        self.rect = self.rect.move(x, y)
-        q = pygame.sprite.spritecollideany(self, platforms)
-        if q and falling:
-            self.rect = self.rect.move(0, -y)
+    def move(self, x=0, y=0):
+
+        delta = 1 if x > 0 else -1
+        for _ in range(*sorted((x, 0))):
+            self.rect = self.rect.move(delta, 0)
+            if pygame.sprite.spritecollideany(self, platforms):
+                self.rect = self.rect.move(-delta, 0)
+                break
+            if pygame.sprite.spritecollideany(self, barrels):
+                return True
+
+        delta = 1 if y > 0 else -1
+        for _ in range(*sorted((y, 0))):
+            self.rect = self.rect.move(0, delta)
+            if pygame.sprite.spritecollideany(self, platforms):
+                self.rect = self.rect.move(0, -delta)
+                break
+            if pygame.sprite.spritecollideany(self, barrels):
+                return True
+            if pygame.sprite.spritecollideany(self, ladders):
+                self.climbing = True
+                break
+
         if pygame.sprite.spritecollideany(self, ladders):
             self.climbing = True
-        else:
-            self.climbing = False
+
+    def can_jump(self):
+        print(2)
+        self.rect = self.rect.move(0, 1)
+        print(pygame.sprite.spritecollideany(self, platforms), pygame.sprite.spritecollideany(self, ladders))
+        yield pygame.sprite.spritecollideany(self, platforms) or\
+            pygame.sprite.spritecollideany(self, ladders)
+
+        self.rect = self.rect.move(0, -1)
 
 
 screen.fill((255, 255, 255))
@@ -69,26 +98,26 @@ while running:
                     enemy.rect.x, enemy.rect.y = event.pos
                 else:
                     enemy = Enemy(en, event.pos)
-        elif event.type == pygame.KEYDOWN:
-            if enemy:
-                if event.key == 275:
-                    enemy.move(10, 0)
-                elif event.key == 276:
-                    enemy.move(-10, 0)
-                elif enemy.climbing:
-                    if event.key == 274:
-                        enemy.move(0, 10)
-                    elif event.key == 273:
-                        enemy.move(0, -10)
+        if enemy:
+            if pygame.key.get_pressed()[pygame.K_LEFT]:
+                enemy.move(x=-10)
+            elif pygame.key.get_pressed()[pygame.K_RIGHT]:
+                enemy.move(x=10)
+            elif pygame.key.get_pressed()[pygame.K_SPACE] and enemy.can_jump():
+                print(1)
+                enemy.move(y=-20)
+            elif enemy.climbing:
+                if pygame.key.get_pressed()[pygame.K_UP]:
+                    enemy.move(y=-10)
+                elif pygame.key.get_pressed()[pygame.K_DOWN]:
+                    enemy.move(y=10)
 
-    if enemy and not enemy.climbing:
-        enemy.move(0, 1, falling=True)
-
+    if enemy: enemy.move(y=10)
     screen.fill((255, 255, 255))
     platforms.draw(screen)
     ladders.draw(screen)
     en.draw(screen)
     pygame.display.flip()
-    clock.tick(50)
+    clock.tick(10)
 
 pygame.quit()

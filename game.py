@@ -2,7 +2,7 @@ import pygame
 
 CHARACTER_SIZE = 30, 30
 FALLING_SPEED = 10  # Скорость падения (pixels/tick)
-
+pause = False
 pygame.init()
 
 size = width, height = 1000, 600
@@ -66,13 +66,14 @@ class Enemy(pygame.sprite.Sprite):
             self.climbing = True
 
     def can_jump(self):
-        print(2)
-        self.rect = self.rect.move(0, 1)
-        print(pygame.sprite.spritecollideany(self, platforms), pygame.sprite.spritecollideany(self, ladders))
-        yield pygame.sprite.spritecollideany(self, platforms) or\
-            pygame.sprite.spritecollideany(self, ladders)
+        """Проверка, есть ли от чего оттолкнуться для прыжка"""
 
+        self.rect = self.rect.move(0, 1)
+
+        res = bool(pygame.sprite.spritecollideany(self, platforms) or
+                   pygame.sprite.spritecollideany(self, ladders))
         self.rect = self.rect.move(0, -1)
+        return res
 
 
 screen.fill((255, 255, 255))
@@ -99,18 +100,23 @@ while running:
                 else:
                     enemy = Enemy(en, event.pos)
         if enemy:
-            if pygame.key.get_pressed()[pygame.K_LEFT]:
-                enemy.move(x=-10)
-            elif pygame.key.get_pressed()[pygame.K_RIGHT]:
-                enemy.move(x=10)
-            elif pygame.key.get_pressed()[pygame.K_SPACE] and enemy.can_jump():
-                print(1)
-                enemy.move(y=-20)
-            elif enemy.climbing:
-                if pygame.key.get_pressed()[pygame.K_UP]:
-                    enemy.move(y=-10)
-                elif pygame.key.get_pressed()[pygame.K_DOWN]:
-                    enemy.move(y=10)
+            if not pause:
+                if pygame.key.get_pressed()[pygame.K_LEFT]:
+                    enemy.move(x=-10)
+                elif pygame.key.get_pressed()[pygame.K_RIGHT]:
+                    enemy.move(x=10)
+                elif pygame.key.get_pressed()[pygame.K_SPACE] and enemy.can_jump():
+                    enemy.move(y=-60)
+                elif pygame.key.get_pressed()[pygame.K_p]:
+                    pause = True
+                elif enemy.climbing:
+                    if pygame.key.get_pressed()[pygame.K_UP]:
+                        enemy.move(y=-10)
+                    elif pygame.key.get_pressed()[pygame.K_DOWN]:
+                        enemy.move(y=10)
+            elif pygame.key.get_pressed()[pygame.K_p]:
+                pause = not pause
+
 
     if enemy: enemy.move(y=10)
     screen.fill((255, 255, 255))

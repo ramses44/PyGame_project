@@ -1,14 +1,29 @@
+"""Никому н@х*й не нужная программа (типо игра)"""
+
+# Имопрт библиотек
 import pygame
 import os
 
+# Задаём все необходимые константы
 CHARACTER_SIZE = 60, 100
 PLATFORM_SIZE = 150, 25
 LADDER_SIZE = 50, 120
 FALLING_SPEED = 2  # Скорость падения (pixels/tick)
-LEFT, RIGHT = False, True
+WINDOW_SIZE = 600, 400
+LEFT, RIGHT = False, True  # Нужны для разворота персонажа направо/налево
+BACKGROUND_COLOR = (228, 228, 228)
+FPS = 60
+
+# Инициалтзация pygame программы
+pygame.init()
+
+screen = pygame.display.set_mode(WINDOW_SIZE)
+screen.fill(BACKGROUND_COLOR)
 
 
 def load_image(name, colorkey=None):
+    """Функция для открытия изображения в pygame.image"""
+
     fullname = os.path.join('images', name)
     image = pygame.image.load(fullname)
 
@@ -24,20 +39,10 @@ def load_image(name, colorkey=None):
     return image
 
 
-pygame.init()
-
-size = width, height = 1000, 600
-
-screen = pygame.display.set_mode(size)
-running = True
-
-platforms = pygame.sprite.Group()
-barrels = pygame.sprite.Group()
-ladders = pygame.sprite.Group()
-
-
 class Platform(pygame.sprite.Sprite):
-    image = load_image("platform.png")
+    """Класс платформы. По ним персонаж будет ходить, а бочки катиться"""  # или не будут))
+
+    image = load_image("platform.png")  # Загружаем изображение платформы из файла
 
     def __init__(self, group, pos):
         super().__init__(group)
@@ -46,8 +51,18 @@ class Platform(pygame.sprite.Sprite):
         self.mask = pygame.mask.from_surface(self.image)
         self.rect.x, self.rect.y = pos
 
+    def rotate(self, angle):
+        """Метод поворота (наклона) платформы. Передаётся угол угол"""
+
+        self.image = pygame.transform.rotate(self.image, angle)
+        x, y = self.rect.x, self.rect.y
+        self.rect = self.image.get_rect()
+        self.rect.x, self.rect.y = x, y
+
 
 class Ladder(pygame.sprite.Sprite):
+    """Класс лестницы. По ним персонаж будет лазить"""
+
     image = load_image("ladder.png")
 
     def __init__(self, group, pos):
@@ -59,6 +74,10 @@ class Ladder(pygame.sprite.Sprite):
 
 
 class Enemy(pygame.sprite.Sprite):
+    """Класс персонажа, которым собственно и управляет игрок))"""
+
+    # Подгружаем 2 состояния персонажа (с разным положением ног для имитации шагов)
+    # Сейчас перс представлен мужиком с большой головой и сигаретой)
     image1 = load_image("character_1.png")
     image2 = load_image("character_2.png")
 
@@ -73,6 +92,8 @@ class Enemy(pygame.sprite.Sprite):
         self.rect.x, self.rect.y = pos
 
     def move(self, x=0, y=0):
+        """Метод для передвижения персонажа.
+        передаётся перемещение по осям X и Y"""  # можно поменять последние 3 буквы местами...))
 
         if x > 0:
             delta = 1
@@ -155,50 +176,82 @@ class Enemy(pygame.sprite.Sprite):
             self.rect.x, self.rect.y = x, y
 
 
-screen.fill((255, 255, 255))
+# Создаём группы спрайтов
+platforms = pygame.sprite.Group()
+barrels = pygame.sprite.Group()
+ladders = pygame.sprite.Group()
+en = pygame.sprite.Group()
+
+# Подготавливаем программу к запуску игрового цикла
 platforms.draw(screen)
 enemy = None
 clock = pygame.time.Clock()
-en = pygame.sprite.Group()
+running = True
 
+# Игровой цикл
 while running:
+    # Обрабатываем каждое событие циклом for
     for event in pygame.event.get():
-
         if event.type == pygame.QUIT:
+            # Завершаем игровой цикл, если программу закрыли
             running = False
 
         elif event.type == pygame.MOUSEBUTTONDOWN:
+            # Обработка событий кликов мышкой
+
             if event.button == 1:
-                if pygame.key.get_pressed()[305] or pygame.key.get_pressed()[306]:
+                # Если клик левой кнопкой, рисуем...
+                if pygame.key.get_pressed()[pygame.K_LCTRL]:
+                    # лестницу, если зажата клавиша левый Ctrl
                     Ladder(ladders, event.pos)
                 else:
+                    # платформу
                     Platform(platforms, event.pos)
+
             elif event.button == 3:
+                # если правая кнопка мыши, помещаем персонажа в координаты нажатия
                 if enemy:
                     enemy.rect.x, enemy.rect.y = event.pos
                 else:
                     enemy = Enemy(en, event.pos)
-        if enemy:
+
+        elif enemy:
+            # Если персонаж существует, проверяем, нужно ли его двигать
+
             if pygame.key.get_pressed()[pygame.K_LEFT]:
+                # Двигаем влево
                 enemy.move(x=-10)
 
             elif pygame.key.get_pressed()[pygame.K_RIGHT]:
+                # Двигаем вправо
                 enemy.move(x=10)
 
             elif pygame.key.get_pressed()[pygame.K_SPACE] and enemy.can_jump():
+                # Прыжок
                 enemy.move(y=-60)
+
             elif enemy.climbing:
+                # Если герой на лестнице...
+
                 if pygame.key.get_pressed()[pygame.K_UP]:
+                    # двигаем наверх
                     enemy.move(y=-10)
+
                 elif pygame.key.get_pressed()[pygame.K_DOWN]:
+                    # двигаем вниз
                     enemy.move(y=10)
 
-    if enemy and not enemy.climbing: enemy.move(y=FALLING_SPEED)
-    screen.fill((255, 255, 255))
+    if enemy and not enemy.climbing:
+        # Если персонаж не на лестнице, на него действует гравитация
+        enemy.move(y=FALLING_SPEED)
+
+    # Отрисовываем всё. что необходимо
+    screen.fill(BACKGROUND_COLOR)
     platforms.draw(screen)
     ladders.draw(screen)
     en.draw(screen)
     pygame.display.flip()
-    clock.tick(60)
+    clock.tick(FPS)
 
+# Выходим из pygame по завершении игрового цикла
 pygame.quit()

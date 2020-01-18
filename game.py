@@ -46,18 +46,26 @@ class Platform(pygame.sprite.Sprite):
 
     def __init__(self, group, pos):
         super().__init__(group)
-        self.image = pygame.transform.scale(Platform.image, PLATFORM_SIZE)
+        self.image = self.old_im = pygame.transform.scale(Platform.image, PLATFORM_SIZE)
         self.rect = self.image.get_rect()
         self.mask = pygame.mask.from_surface(self.image)
         self.rect.x, self.rect.y = pos
+        self.angle = 0
 
     def rotate(self, angle):
-        """Метод поворота (наклона) платформы. Передаётся угол угол"""
+        """Метод поворота (наклона) платформы (платформа вращается вокруг центра. Передаётся угол"""
 
-        self.image = pygame.transform.rotate(self.image, angle)
-        x, y = self.rect.x, self.rect.y
+        self.angle += angle
+        self.angle %= 360
+
+        self.image = pygame.transform.rotate(self.old_im, self.angle)
+
+        center = self.rect.center
         self.rect = self.image.get_rect()
-        self.rect.x, self.rect.y = x, y
+        self.rect.x = center[0] - self.rect.center[0]
+        self.rect.y = center[1] - self.rect.center[1]
+
+        self.mask = pygame.mask.from_surface(self.image)
 
 
 class Ladder(pygame.sprite.Sprite):
@@ -176,6 +184,21 @@ class Enemy(pygame.sprite.Sprite):
             self.rect.x, self.rect.y = x, y
 
 
+class Nothing(pygame.sprite.Sprite):
+    """Класс используемый для тестирования всяких штук"""
+
+    def __init__(self, pos):
+        super().__init__()
+        self.image = pygame.Surface((5, 5))
+        self.rect = pygame.Rect(*pos, 5, 5)
+
+    def choose_platform(self):
+        return pygame.sprite.spritecollideany(self, platforms)
+
+    def choose_ladder(self):
+        return pygame.sprite.spritecollideany(self, ladders)
+
+
 # Создаём группы спрайтов
 platforms = pygame.sprite.Group()
 barrels = pygame.sprite.Group()
@@ -195,6 +218,14 @@ while running:
         if event.type == pygame.QUIT:
             # Завершаем игровой цикл, если программу закрыли
             running = False
+
+        elif pygame.key.get_pressed()[pygame.K_LALT]:
+            # Пока ALT будет служебной клавишей для всяких тестируемх штук
+
+            # По нажатию ALT разворачивается платформа, на которую наведена мышь
+            platform = Nothing(pygame.mouse.get_pos()).choose_platform()
+            if platform:
+                platform.rotate(60)
 
         elif event.type == pygame.MOUSEBUTTONDOWN:
             # Обработка событий кликов мышкой

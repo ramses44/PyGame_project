@@ -97,7 +97,7 @@ class Enemy(pygame.sprite.Sprite):
         self.rect = self.image.get_rect()
         self.climbing = False
         self.mask = pygame.mask.from_surface(self.image)
-        self.rect.x, self.rect.y = pos
+        self.spawn(pos)
 
     def move(self, x=0, y=0):
         """Метод для передвижения персонажа.
@@ -113,51 +113,70 @@ class Enemy(pygame.sprite.Sprite):
         for _ in range(*sorted((x, 0))):
             self.rect = self.rect.move(delta, 0)
 
-            s = pygame.sprite.spritecollideany(self, platforms)
-            if s and pygame.sprite.collide_mask(self, s):
-                self.rect = self.rect.move(-delta, 0)
-                break
+            ss = pygame.sprite.spritecollide(self, platforms, dokill=False)
+            for s in ss:
+                if pygame.sprite.collide_mask(self, s):
+                    self.rect = self.rect.move(-delta, 0)
+                    break
 
-            s = pygame.sprite.spritecollideany(self, barrels)
-            if s and pygame.sprite.collide_mask(self, s):
-                return True
+            ss = pygame.sprite.spritecollide(self, barrels, dokill=False)
+            for s in ss:
+                if pygame.sprite.collide_mask(self, s):
+                    return True
 
         delta = 1 if y > 0 else -1
+        stop = False
         for _ in range(*sorted((y, 0))):
             self.rect = self.rect.move(0, delta)
 
-            s = pygame.sprite.spritecollideany(self, platforms)
-            if s and pygame.sprite.collide_mask(self, s):
-                self.rect = self.rect.move(0, -delta)
+            ss = pygame.sprite.spritecollide(self, platforms, dokill=False)
+            for s in ss:
+                if pygame.sprite.collide_mask(self, s):
+                    self.rect = self.rect.move(0, -delta)
+                    stop = True
+                    break
+            if stop:
                 break
 
-            s = pygame.sprite.spritecollideany(self, barrels)
-            if s and pygame.sprite.collide_mask(self, s):
-                return True
+            ss = pygame.sprite.spritecollide(self, barrels, dokill=False)
+            for s in ss:
+                if pygame.sprite.collide_mask(self, s):
+                    return True
 
-            s = pygame.sprite.spritecollideany(self, ladders)
-            if s and pygame.sprite.collide_mask(self, s) and not self.climbing:
+            ss = pygame.sprite.spritecollide(self, ladders, dokill=False)
+            for s in ss:
+                if pygame.sprite.collide_mask(self, s) and not self.climbing:
+                    stop = True
+                    break
+            if stop:
+                break
+
+        ss = pygame.sprite.spritecollide(self, ladders, dokill=False)
+        for s in ss:
+            if pygame.sprite.collide_mask(self, s) and not self.climbing:
                 self.climbing = True
                 break
-
-        s = pygame.sprite.spritecollideany(self, ladders)
-        if s and pygame.sprite.collide_mask(self, s):
-            self.climbing = True
-        else:
-            self.climbing = False
+            else:
+                self.climbing = False
 
     def can_jump(self):
         """Проверка, есть ли от чего оттолкнуться для прыжка"""
 
         self.rect = self.rect.move(0, 1)
 
-        res = pygame.sprite.spritecollideany(self, platforms)
-        if not res:
-            res = pygame.sprite.spritecollideany(self, ladders)
-        res = bool(res and pygame.sprite.collide_mask(self, res))
+        r = True
+        res = pygame.sprite.spritecollide(self, platforms, dokill=False) + \
+              pygame.sprite.spritecollide(self, ladders, dokill=False)
+
+        for s in res:
+            if pygame.sprite.collide_mask(self, s):
+                break
+        else:
+            r = False
 
         self.rect = self.rect.move(0, -1)
-        return res
+
+        return r
 
     def step(self, direction):
         """Шаг персонажа, т.е. смена его картинки"""
@@ -182,6 +201,9 @@ class Enemy(pygame.sprite.Sprite):
             x, y = self.rect.x, self.rect.y
             self.rect = self.image.get_rect()
             self.rect.x, self.rect.y = x, y
+
+    def spawn(self, pos):
+        self.rect.x, self.rect.y = [i[0] - i[1] // 2 for i in zip(pos, CHARACTER_SIZE)]
 
 
 class Nothing(pygame.sprite.Sprite):
@@ -242,7 +264,7 @@ while running:
             elif event.button == 3:
                 # если правая кнопка мыши, помещаем персонажа в координаты нажатия
                 if enemy:
-                    enemy.rect.x, enemy.rect.y = event.pos
+                    enemy.spawn(event.pos)
                 else:
                     enemy = Enemy(en, event.pos)
 

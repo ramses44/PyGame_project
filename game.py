@@ -86,8 +86,8 @@ class Enemy(pygame.sprite.Sprite):
 
     # Подгружаем 2 состояния персонажа (с разным положением ног для имитации шагов)
     # Сейчас перс представлен мужиком с большой головой и сигаретой)
-    image1 = load_image("character_1.png")
-    image2 = load_image("character_2.png")
+    image1 = load_image("skin_1_1.png")
+    image2 = load_image("skin_1_2.png")
 
     def __init__(self, group, pos):
         super().__init__(group)
@@ -129,14 +129,15 @@ class Enemy(pygame.sprite.Sprite):
         for _ in range(*sorted((y, 0))):
             self.rect = self.rect.move(0, delta)
 
-            ss = pygame.sprite.spritecollide(self, platforms, dokill=False)
-            for s in ss:
-                if pygame.sprite.collide_mask(self, s):
-                    self.rect = self.rect.move(0, -delta)
-                    stop = True
+            if not self.climbing:
+                ss = pygame.sprite.spritecollide(self, platforms, dokill=False)
+                for s in ss:
+                    if pygame.sprite.collide_mask(self, s):
+                        self.rect = self.rect.move(0, -delta)
+                        stop = True
+                        break
+                if stop:
                     break
-            if stop:
-                break
 
             ss = pygame.sprite.spritecollide(self, barrels, dokill=False)
             for s in ss:

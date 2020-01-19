@@ -9,7 +9,7 @@ CHARACTER_SIZE = 60, 100
 PLATFORM_SIZE = 150, 25
 LADDER_SIZE = 50, 120
 FALLING_SPEED = 2  # Скорость падения (pixels/tick)
-WINDOW_SIZE = 600, 400
+WINDOW_SIZE = 1000, 600
 LEFT, RIGHT = False, True  # Нужны для разворота персонажа направо/налево
 BACKGROUND_COLOR = (228, 228, 228)
 FPS = 60
@@ -145,19 +145,22 @@ class Enemy(pygame.sprite.Sprite):
 
             ss = pygame.sprite.spritecollide(self, ladders, dokill=False)
             for s in ss:
-                if pygame.sprite.collide_mask(self, s) and not self.climbing:
-                    stop = True
+                if pygame.sprite.collide_mask(self, s):
+                    if not self.climbing:
+                        stop = True
                     break
+            else:
+                self.climbing = False
             if stop:
                 break
 
         ss = pygame.sprite.spritecollide(self, ladders, dokill=False)
         for s in ss:
-            if pygame.sprite.collide_mask(self, s) and not self.climbing:
+            if pygame.sprite.collide_mask(self, s):
                 self.climbing = True
                 break
-            else:
-                self.climbing = False
+        else:
+            self.climbing = False
 
     def can_jump(self):
         """Проверка, есть ли от чего оттолкнуться для прыжка"""

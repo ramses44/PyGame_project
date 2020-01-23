@@ -248,13 +248,15 @@ while running:
             # Завершаем игровой цикл, если программу закрыли
             running = False
 
-        elif pygame.key.get_pressed()[pygame.K_LALT]:
-            # Пока ALT будет служебной клавишей для всяких тестируемх штук
-
-            # По нажатию ALT разворачивается платформа, на которую наведена мышь
+        elif event.type == pygame.KEYDOWN:
             platform = Nothing(pygame.mouse.get_pos()).choose_platform()
+            # Пока ALT и DEL будут служебными клавишами для всяких тестируемх штук
             if platform:
-                platform.rotate(60)
+                if event.key == pygame.K_LALT:
+                    # По нажатию ALT разворачивается платформа, на которую наведена мышь
+                    platform.rotate(30)
+                elif event.key == pygame.K_DELETE:
+                    platform.kill()
 
         elif event.type == pygame.MOUSEBUTTONDOWN:
             # Обработка событий кликов мышкой

@@ -1,5 +1,3 @@
-"""Никому н@х*й не нужная программа (типо игра)"""
-
 # Имопрт библиотек
 import pygame
 import os
@@ -88,6 +86,8 @@ class Enemy(pygame.sprite.Sprite):
     # Сейчас перс представлен мужиком с большой головой и сигаретой)
     image1 = load_image("skin_1_1.png")
     image2 = load_image("skin_1_2.png")
+    # image1 = load_image("character_1.png")
+    # image2 = load_image("character_2.png")
 
     def __init__(self, group, pos):
         super().__init__(group)
@@ -185,8 +185,8 @@ class Enemy(pygame.sprite.Sprite):
     def step(self, direction):
         """Шаг персонажа, т.е. смена его картинки"""
 
-        self.image = eval(f"pygame.transform.scale(Enemy.image{self.active_step + 1}, CHARACTER_SIZE)")
-        self.active_step = (self.active_step + 1) % 2
+        self.active_step += 1
+        self.image = eval(f"pygame.transform.scale(Enemy.image{self.active_step // 8 % 2  + 1}, CHARACTER_SIZE)")
         self.rotation = RIGHT
 
         x, y = self.rect.x, self.rect.y
@@ -240,7 +240,10 @@ running = True
 # Игровой цикл
 while running:
     # Обрабатываем каждое событие циклом for
-    for event in pygame.event.get():
+    events = [pygame.event.EventType]
+    events = pygame.event.get() + events
+    events = events[:5]
+    for event in events:
         if event.type == pygame.QUIT:
             # Завершаем игровой цикл, если программу закрыли
             running = False
@@ -277,26 +280,27 @@ while running:
 
             if pygame.key.get_pressed()[pygame.K_LEFT]:
                 # Двигаем влево
-                enemy.move(x=-10)
+                enemy.move(x=-3)
 
             elif pygame.key.get_pressed()[pygame.K_RIGHT]:
                 # Двигаем вправо
-                enemy.move(x=10)
+                enemy.move(x=3)
 
             elif pygame.key.get_pressed()[pygame.K_SPACE] and enemy.can_jump():
                 # Прыжок
-                enemy.move(y=-60)
+                delta = 5 if enemy.climbing else 60
+                enemy.move(y=-delta)
 
             elif enemy.climbing:
                 # Если герой на лестнице...
 
                 if pygame.key.get_pressed()[pygame.K_UP]:
                     # двигаем наверх
-                    enemy.move(y=-10)
+                    enemy.move(y=-3)
 
                 elif pygame.key.get_pressed()[pygame.K_DOWN]:
                     # двигаем вниз
-                    enemy.move(y=10)
+                    enemy.move(y=3)
 
     if enemy and not enemy.climbing:
         # Если персонаж не на лестнице, на него действует гравитация

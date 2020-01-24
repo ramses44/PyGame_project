@@ -284,16 +284,16 @@ while running:
                 # Двигаем влево
                 enemy.move(x=-3)
 
-            elif pygame.key.get_pressed()[pygame.K_RIGHT]:
+            if pygame.key.get_pressed()[pygame.K_RIGHT]:
                 # Двигаем вправо
                 enemy.move(x=3)
 
-            elif pygame.key.get_pressed()[pygame.K_SPACE] and enemy.can_jump():
+            if pygame.key.get_pressed()[pygame.K_SPACE] and enemy.can_jump():
                 # Прыжок
                 delta = 5 if enemy.climbing else 60
                 enemy.move(y=-delta)
 
-            elif enemy.climbing:
+            if enemy.climbing:
                 # Если герой на лестнице...
 
                 if pygame.key.get_pressed()[pygame.K_UP]:

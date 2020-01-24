@@ -1,15 +1,19 @@
 # Имопрт библиотек
 import pygame
 import os
+from GIFImage import GIFImage as gif
+import time
+from threading import Thread
 
 # Задаём все необходимые константы
 CHARACTER_SIZE = 60, 100
 PLATFORM_SIZE = 150, 25
 LADDER_SIZE = 50, 120
+BARREL_SIZE = 70, 70
 FALLING_SPEED = 2  # Скорость падения (pixels/tick)
 WINDOW_SIZE = 1000, 600
 LEFT, RIGHT = False, True  # Нужны для разворота персонажа направо/налево
-BACKGROUND_COLOR = (228, 228, 228)
+BACKGROUND_COLOR = [255] * 3
 FPS = 60
 
 # Инициалтзация pygame программы
@@ -77,6 +81,38 @@ class Ladder(pygame.sprite.Sprite):
         self.rect = self.image.get_rect()
         self.mask = pygame.mask.from_surface(self.image)
         self.rect.x, self.rect.y = pos
+
+
+class Barrel(pygame.sprite.Sprite):
+    """Класс бочки. Она катится по платформам и взрывается при контакте с ней персонажа"""
+
+    image = load_image("barrel.png")
+    boom = gif("images/boom.gif")
+
+    def __init__(self, group, pos):
+        super().__init__(group)
+
+        self.image = pygame.transform.scale(Barrel.image, BARREL_SIZE)
+        self.rect = self.image.get_rect()
+        self.mask = pygame.mask.from_surface(self.image)
+        self.rect.x, self.rect.y = pos
+        self.boom = Barrel.boom.copy()
+
+    def get_center(self):
+        """Получаем координаты центра бочки"""
+        return self.rect.x + BARREL_SIZE[0] // 2, self.rect.y + BARREL_SIZE[1] // 2
+
+    def booom(self):
+        """Метод, взрывающий бочку (запускает поток, который вовремя остановит анимацию взрыва)"""
+
+        self.kill()
+
+        def for_thread(boom):
+            time.sleep(9)
+            boom.pause()
+
+        cent = self.get_center()
+        return Thread(target=for_thread, args=(self.boom,)), self.boom, (cent[0] - 55, cent[1] - 60)
 
 
 class Enemy(pygame.sprite.Sprite):
@@ -236,6 +272,7 @@ platforms.draw(screen)
 enemy = None
 clock = pygame.time.Clock()
 running = True
+booms = []
 
 # Игровой цикл
 while running:
@@ -277,6 +314,19 @@ while running:
                 else:
                     enemy = Enemy(en, event.pos)
 
+            elif event.button == 2:
+                # По нажатию на колёсико мыши создаётся бочка
+                if barrels and pygame.key.get_pressed()[pygame.K_LCTRL]:
+                    # Если зажата клафиша CTRL, то бочка, на которой находится курсор, взрывается
+                    b = pygame.sprite.spritecollideany(Nothing(event.pos), barrels)
+                    if b:
+                        t, *boom_info = b.booom()
+                        t.start()
+                        booms.append(boom_info)
+
+                else:
+                    Barrel(barrels, event.pos)
+
         elif enemy:
             # Если персонаж существует, проверяем, нужно ли его двигать
 
@@ -308,10 +358,16 @@ while running:
         # Если персонаж не на лестнице, на него действует гравитация
         enemy.move(y=FALLING_SPEED)
 
-    # Отрисовываем всё. что необходимо
     screen.fill(BACKGROUND_COLOR)
+
+    # Воспроизводим анимацию взрывов
+    for boom in booms:
+        boom[0].render(screen, boom[1])
+
+    # Отрисовываем всё. что необходимо
     platforms.draw(screen)
     ladders.draw(screen)
+    barrels.draw(screen)
     en.draw(screen)
     pygame.display.flip()
     clock.tick(FPS)

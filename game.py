@@ -11,6 +11,7 @@ PLATFORM_SIZE = 150, 25
 LADDER_SIZE = 50, 120
 BARREL_SIZE = 70, 70
 FALLING_SPEED = 2  # Скорость падения (pixels/tick)
+BARREL_ROTATION = 10
 WINDOW_SIZE = 1000, 600
 LEFT, RIGHT = False, True  # Нужны для разворота персонажа направо/налево
 BACKGROUND_COLOR = [255] * 3
@@ -92,11 +93,13 @@ class Barrel(pygame.sprite.Sprite):
     def __init__(self, group, pos):
         super().__init__(group)
 
-        self.image = pygame.transform.scale(Barrel.image, BARREL_SIZE)
+        self.image = self.old_im = pygame.transform.scale(Barrel.image, BARREL_SIZE)
         self.rect = self.image.get_rect()
         self.mask = pygame.mask.from_surface(self.image)
         self.rect.x, self.rect.y = pos
         self.boom = Barrel.boom.copy()
+        self.speed = 0
+        self.angle = 0
 
     def get_center(self):
         """Получаем координаты центра бочки"""
@@ -114,12 +117,43 @@ class Barrel(pygame.sprite.Sprite):
         cent = self.get_center()
         return Thread(target=for_thread, args=(self.boom,)), self.boom, (cent[0] - 55, cent[1] - 60)
 
+    def move(self, x=0, y=0):
+
+        self.rect = self.rect.move(x, 0)
+        ss = pygame.sprite.spritecollide(self, platforms, dokill=False)
+        for s in ss:
+            if pygame.sprite.collide_mask(self, s):
+                self.rect = self.rect.move(-x, 0)
+                break
+
+        self.rect = self.rect.move(0, y)
+        ss = pygame.sprite.spritecollide(self, platforms, dokill=False)
+        for s in ss:
+            if pygame.sprite.collide_mask(self, s):
+                self.rect = self.rect.move(0, -y)
+                break
+
+    def update(self):
+
+        self.angle += BARREL_ROTATION
+        self.angle %= 360
+
+        x, y = self.rect.x, self.rect.y
+        self.rect = pygame.transform.rotate(self.old_im, self.angle).get_rect()
+        self.rect.x, self.rect.y = x, y
+
+        for _ in range(self.speed):
+            self.move(x=1)
+        for _ in range(FALLING_SPEED):
+            self.move(y=1)
+
+        super().update()
+
 
 class Enemy(pygame.sprite.Sprite):
     """Класс персонажа, которым собственно и управляет игрок))"""
 
     # Подгружаем 2 состояния персонажа (с разным положением ног для имитации шагов)
-    # Сейчас перс представлен мужиком с большой головой и сигаретой)
     image1 = load_image("skin_1_1.png")
     image2 = load_image("skin_1_2.png")
     # image1 = load_image("character_1.png")
@@ -136,8 +170,7 @@ class Enemy(pygame.sprite.Sprite):
         self.spawn(pos)
 
     def move(self, x=0, y=0):
-        """Метод для передвижения персонажа.
-        передаётся перемещение по осям X и Y"""  # можно поменять последние 3 буквы местами...))
+        """Метод для передвижения персонажа. Передаётся перемещение по осям X и Y"""
 
         if x > 0:
             delta = 1
@@ -325,7 +358,8 @@ while running:
                         booms.append(boom_info)
 
                 else:
-                    Barrel(barrels, event.pos)
+                    b = Barrel(barrels, event.pos)
+                    b.speed = 1
 
         elif enemy:
             # Если персонаж существует, проверяем, нужно ли его двигать
@@ -360,13 +394,17 @@ while running:
 
     screen.fill(BACKGROUND_COLOR)
 
+    # Отрисовываем всё. что необходимо
+    platforms.draw(screen)
+    ladders.draw(screen)
+
     # Воспроизводим анимацию взрывов
     for boom in booms:
         boom[0].render(screen, boom[1])
 
-    # Отрисовываем всё. что необходимо
-    platforms.draw(screen)
-    ladders.draw(screen)
+    for bar in barrels:
+        bar.update()
+
     barrels.draw(screen)
     en.draw(screen)
     pygame.display.flip()

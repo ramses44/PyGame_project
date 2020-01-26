@@ -9,9 +9,9 @@ from threading import Thread
 CHARACTER_SIZE = 60, 100
 PLATFORM_SIZE = 150, 25
 LADDER_SIZE = 50, 120
-BARREL_SIZE = 70, 70
+BARREL_SIZE = 60, 60
 FALLING_SPEED = 2  # Скорость падения (pixels/tick)
-BARREL_ROTATION = 10
+BARREL_ROTATION = 3
 WINDOW_SIZE = 1000, 600
 LEFT, RIGHT = False, True  # Нужны для разворота персонажа направо/налево
 BACKGROUND_COLOR = [255] * 3
@@ -100,10 +100,11 @@ class Barrel(pygame.sprite.Sprite):
         self.boom = Barrel.boom.copy()
         self.speed = 0
         self.angle = 0
+        self.reserve_impulse = 0
 
     def get_center(self):
         """Получаем координаты центра бочки"""
-        return self.rect.x + BARREL_SIZE[0] // 2, self.rect.y + BARREL_SIZE[1] // 2
+        return self.rect.x + self.rect.size[0] // 2, self.rect.y + self.rect.size[1] // 2
 
     def booom(self):
         """Метод, взрывающий бочку (запускает поток, который вовремя остановит анимацию взрыва)"""
@@ -133,17 +134,69 @@ class Barrel(pygame.sprite.Sprite):
                 self.rect = self.rect.move(0, -y)
                 break
 
+        bs = pygame.sprite.spritecollide(self, barrels, dokill=False)
+        for b in bs:
+            if pygame.sprite.collide_mask(self, b) and self != b:
+                t, *boom_info = b.booom()
+                t.start()
+                booms.append(boom_info)
+
+                t, *boom_info = self.booom()
+                t.start()
+                booms.append(boom_info)
+
+        if enemy and pygame.sprite.collide_mask(self, enemy):
+            t, *boom_info = self.booom()
+            t.start()
+            booms.append(boom_info)
+            enemy.kill()
+            Thread(target=gameover).start()
+
+    def speed_update(self):
+        """Изменяем скорость бочки в зависимости от положения платформы под ней"""
+
+        self.rect = self.rect.move(0, 1)
+
+        ps = pygame.sprite.spritecollide(self, platforms, dokill=False)
+        for p in ps:
+            if pygame.sprite.collide_mask(self, p):
+                if p.angle // 90 % 2:
+                    self.speed = 1
+                    self.reserve_impulse = 160
+                elif p.angle != 0:
+                    self.speed = -1
+                    self.reserve_impulse = 160
+                else:
+                    if self.reserve_impulse == 0:
+                        self.speed = 0
+                    self.reserve_impulse -= 1
+
+        self.rect = self.rect.move(0, -1)
+
     def update(self):
 
-        self.angle += BARREL_ROTATION
+        self.speed_update()
+
+        if self.speed < 0:
+            self.angle += BARREL_ROTATION
+        elif self.speed > 0:
+            self.angle -= BARREL_ROTATION
+
         self.angle %= 360
 
         x, y = self.rect.x, self.rect.y
-        self.rect = pygame.transform.rotate(self.old_im, self.angle).get_rect()
+        self.image = pygame.transform.rotate(self.old_im, self.angle)
+        self.rect = self.image.get_rect()
+        s = self.rect.size
+        xx, yy = (s[0] - BARREL_SIZE[0]) // 2, (s[1] - BARREL_SIZE[1]) // 2
+        self.image = pygame.transform.chop(self.image, (0, 0, xx, yy))
+        self.image = pygame.transform.chop(self.image, (*BARREL_SIZE, xx, yy))
+        self.rect = self.image.get_rect()
         self.rect.x, self.rect.y = x, y
 
-        for _ in range(self.speed):
-            self.move(x=1)
+        delta = 1 if self.speed > 0 else -1
+        for _ in range(*sorted((self.speed, 0))):
+            self.move(x=delta)
         for _ in range(FALLING_SPEED):
             self.move(y=1)
 
@@ -188,11 +241,6 @@ class Enemy(pygame.sprite.Sprite):
                     self.rect = self.rect.move(-delta, 0)
                     break
 
-            ss = pygame.sprite.spritecollide(self, barrels, dokill=False)
-            for s in ss:
-                if pygame.sprite.collide_mask(self, s):
-                    return True
-
         delta = 1 if y > 0 else -1
         stop = False
         for _ in range(*sorted((y, 0))):
@@ -207,11 +255,6 @@ class Enemy(pygame.sprite.Sprite):
                         break
                 if stop:
                     break
-
-            ss = pygame.sprite.spritecollide(self, barrels, dokill=False)
-            for s in ss:
-                if pygame.sprite.collide_mask(self, s):
-                    return True
 
             ss = pygame.sprite.spritecollide(self, ladders, dokill=False)
             for s in ss:
@@ -231,6 +274,15 @@ class Enemy(pygame.sprite.Sprite):
                 break
         else:
             self.climbing = False
+
+        bs = pygame.sprite.spritecollide(self, barrels, dokill=False)
+        for b in bs:
+            if pygame.sprite.collide_mask(self, b):
+                t, *boom_info = b.booom()
+                t.start()
+                booms.append(boom_info)
+                self.kill()
+                Thread(target=gameover).start()
 
     def can_jump(self):
         """Проверка, есть ли от чего оттолкнуться для прыжка"""
@@ -294,6 +346,23 @@ class Nothing(pygame.sprite.Sprite):
         return pygame.sprite.spritecollideany(self, ladders)
 
 
+def gameover():
+    """Если мы проиграли, выводится соответствующее сообщение"""
+
+    is_gameover[0] = True
+    time.sleep(6)
+
+    platforms.empty()
+    barrels.empty()
+    ladders.empty()
+    booms.clear()
+    screen.fill((0, 0, 0))
+
+    myFont = pygame.font.SysFont("Comic Sans MS", 100)
+    myText = myFont.render("Game Over", 1, (0, 255, 0))
+    screen.blit(myText, (250, 200))
+
+
 # Создаём группы спрайтов
 platforms = pygame.sprite.Group()
 barrels = pygame.sprite.Group()
@@ -306,6 +375,7 @@ enemy = None
 clock = pygame.time.Clock()
 running = True
 booms = []
+is_gameover = [False]
 
 # Игровой цикл
 while running:
@@ -359,7 +429,6 @@ while running:
 
                 else:
                     b = Barrel(barrels, event.pos)
-                    b.speed = 1
 
         elif enemy:
             # Если персонаж существует, проверяем, нужно ли его двигать
@@ -392,7 +461,8 @@ while running:
         # Если персонаж не на лестнице, на него действует гравитация
         enemy.move(y=FALLING_SPEED)
 
-    screen.fill(BACKGROUND_COLOR)
+    if not is_gameover[0]:
+        screen.fill(BACKGROUND_COLOR)
 
     # Отрисовываем всё. что необходимо
     platforms.draw(screen)
@@ -405,8 +475,9 @@ while running:
     for bar in barrels:
         bar.update()
 
-    barrels.draw(screen)
     en.draw(screen)
+    barrels.draw(screen)
+
     pygame.display.flip()
     clock.tick(FPS)
 

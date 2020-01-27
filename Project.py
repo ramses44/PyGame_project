@@ -27,16 +27,32 @@ pygame.init()
 screen = pygame.display.set_mode(WINDOW_SIZE)
 screen.fill(BACKGROUND_COLOR)
 
-# База данных карт
-def bd():
+# База данных карт, вводится номер карты.
+def bd(number):
     # преобразую базу данных
-    dict = dict()
-    con = sqlite3.connect('PyGame.db')
+    dict_Plat = dict()
+    dict_Ladd = list()
+    dict_Barrel = list()
+    startpos = (0, 0)
+    finishpos = (100, 100)
+    con = sqlite3.connect('Map.db')
     cur = con.cursor()
-    # пока не знаю как сохраняется бд
-    #result = cur.execute("""SELECT * FROM data
-    #           WHERE number == ?""", xxxx)
+    # Выводим данные из базы данных
+    result = cur.execute("""SELECT * FROM data
+              WHERE Number == ?""", str(int(number)))
+    for elem in result:
+        for i in elem[1].split(';'):
+            dict_Plat[i.split(':')[0]] = i.split(':')[1]
+        for i in elem[3].split(';'):
+            dict_Ladd.append(i)
+        for i in elem[2].split(';'):
+            dict_Barrel.append(i)
+        startpos = elem[4]
+        finishpos = elem[5]
+    # Когда разделим версии не забыть написать начальный ввод картинки!!!!!!!!!!!
+
     con.close()
+
 
 def load_image(name, colorkey=None):
     """Функция для открытия изображения в pygame.image"""
@@ -55,9 +71,21 @@ def load_image(name, colorkey=None):
 
     return image
 
+
 # сохранение карты в базу данных.
 def savemap():
-    pass
+    con = sqlite3.connect('Map.db')
+    cur = con.cursor()
+    Num = str(2)  # пока и так сойдет
+    Plat = '' # Карооче, если ты это увидишь просто напиши мне их позиции (и угл у панелек) ИЛИ напиши мне в личку это.
+    Bar = ''
+    Lad = ''
+    Startpos = ''
+    Finishpos = ''
+    cur.execute("INSERT INTO data(Number, Platform, Barrel, Ladder, Startpos, Finishpos) VALUES (?, ?, ?, ?, ?, ?)",
+                (Num, Plat, Bar, Lad, Startpos, Finishpos))
+    cur.close()
+    con.close()
 
 
 class Platform(pygame.sprite.Sprite):
@@ -388,6 +416,7 @@ ladders = pygame.sprite.Group()
 en = pygame.sprite.Group()
 
 # Подготавливаем программу к запуску игрового цикла
+bd(1)
 platforms.draw(screen)
 enemy = None
 clock = pygame.time.Clock()
@@ -417,22 +446,23 @@ while running:
 
         elif event.type == pygame.MOUSEBUTTONDOWN:
             # Обработка событий кликов мышкой
-
+            Accept_build = True
             if event.button == 1:
                 # Если клик левой кнопкой, рисуем...
-                if event.button == 1:
                     # отслеживаю нажатие клавишь
-                    for i in buttons:
-                        if i[1] < event.pos[0] < i[1] + i[3] and i[2] < event.pos[1] < i[2] + i[4]:
-                            # выбор действия при нажатии
-                            print("Just do it")
-                            savemap()
-                elif pygame.key.get_pressed()[pygame.K_LCTRL]:
-                    # лестницу, если зажата клавиша левый Ctrl
-                    Ladder(ladders, event.pos)
-                else:
-                    # платформу
-                    Platform(platforms, event.pos)
+                for i in buttons:
+                    if i[1] < event.pos[0] < i[1] + i[3] and i[2] < event.pos[1] < i[2] + i[4]:
+                        Accept_build = False
+                        # выбор действия при нажатии
+                        print("Just do it")
+                        savemap()
+                if Accept_build:
+                    if pygame.key.get_pressed()[pygame.K_LCTRL]:
+                        # лестницу, если зажата клавиша левый Ctrl
+                        Ladder(ladders, event.pos)
+                    else:
+                        # платформу
+                        Platform(platforms, event.pos)
 
 
             elif event.button == 3:
@@ -507,6 +537,7 @@ while running:
 
     pygame.display.flip()
     clock.tick(FPS)
+
 
 # Выходим из pygame по завершении игрового цикла
 pygame.quit()

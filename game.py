@@ -9,13 +9,14 @@ from threading import Thread
 CHARACTER_SIZE = 60, 100
 PLATFORM_SIZE = 150, 25
 LADDER_SIZE = 50, 120
-BARREL_SIZE = 60, 60
+BARREL_SIZE = 30, 30
 FALLING_SPEED = 2  # Скорость падения (pixels/tick)
 BARREL_ROTATION = 3
 WINDOW_SIZE = 1000, 600
 LEFT, RIGHT = False, True  # Нужны для разворота персонажа направо/налево
 BACKGROUND_COLOR = [255] * 3
 FPS = 60
+JUMP_HEIGHT = 80
 
 
 def load_image(name, colorkey=None):
@@ -382,7 +383,7 @@ def main():
                 # Завершаем игровой цикл, если программу закрыли
                 running = False
 
-            elif event.type == pygame.KEYDOWN:
+            elif event.type == pygame.KEYDOWN and not is_gameover[0]:
                 platform = Nothing(pygame.mouse.get_pos()).choose_platform(platforms)
                 # Пока ALT и DEL будут служебными клавишами для всяких тестируемх штук
                 if platform:
@@ -392,7 +393,7 @@ def main():
                     elif event.key == pygame.K_DELETE:
                         platform.kill()
 
-            elif event.type == pygame.MOUSEBUTTONDOWN:
+            elif event.type == pygame.MOUSEBUTTONDOWN and not is_gameover[0]:
                 # Обработка событий кликов мышкой
 
                 if event.button == 1:
@@ -424,7 +425,7 @@ def main():
                     else:
                         b = Barrel(barrels, event.pos)
 
-            elif enemy:
+            elif enemy and not is_gameover[0]:
                 # Если персонаж существует, проверяем, нужно ли его двигать
 
                 if pygame.key.get_pressed()[pygame.K_LEFT]:
@@ -437,7 +438,7 @@ def main():
 
                 if pygame.key.get_pressed()[pygame.K_SPACE] and enemy.can_jump(platforms, ladders):
                     # Прыжок
-                    delta = 5 if enemy.climbing else 60
+                    delta = 5 if enemy.climbing else JUMP_HEIGHT
                     enemy.move(platforms, ladders, barrels, booms, is_gameover, screen, y=-delta)
 
                 if enemy.climbing:

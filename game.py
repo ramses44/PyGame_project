@@ -406,6 +406,7 @@ def main():
                         Platform(platforms, event.pos)
 
                 elif event.button == 3:
+                    print(type(enemy))
                     # если правая кнопка мыши, помещаем персонажа в координаты нажатия
                     if enemy:
                         enemy.spawn(event.pos)

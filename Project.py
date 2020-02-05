@@ -4,18 +4,54 @@ import os
 from GIFImage import GIFImage as gif
 import time
 from threading import Thread
+from menu import draw_button
+import sqlite3
 
 # Задаём все необходимые константы
 CHARACTER_SIZE = 60, 100
 PLATFORM_SIZE = 150, 25
 LADDER_SIZE = 50, 120
 BARREL_SIZE = 60, 60
+buttons = [("Create lvl", 10, 10, 400, 100)]
 FALLING_SPEED = 2  # Скорость падения (pixels/tick)
 BARREL_ROTATION = 3
 WINDOW_SIZE = 1000, 600
 LEFT, RIGHT = False, True  # Нужны для разворота персонажа направо/налево
 BACKGROUND_COLOR = [255] * 3
 FPS = 60
+
+# Инициалтзация pygame программы
+pygame.init()
+
+screen = pygame.display.set_mode(WINDOW_SIZE)
+screen.fill(BACKGROUND_COLOR)
+
+
+# База данных карт, вводится номер карты.
+def bd(number):
+    # преобразую базу данных
+    dict_Plat = dict()
+    dict_Ladd = list()
+    dict_Barrel = list()
+    startpos = (0, 0)
+    finishpos = (100, 100)
+    con = sqlite3.connect('Map.db')
+    cur = con.cursor()
+    # Выводим данные из базы данных
+    result = cur.execute("""SELECT * FROM data
+              WHERE Number == ?""", str(int(number)))
+    for elem in result:
+        for i in elem[1].split(';'):
+            dict_Plat[i.split(':')[0]] = i.split(':')[1]
+        for i in elem[3].split(';'):
+            dict_Ladd.append(i)
+        for i in elem[2].split(';'):
+            dict_Barrel.append(i)
+        startpos = elem[4]
+        finishpos = elem[5]
+    # Когда разделим версии не забыть написать начальный ввод картинки!!!!!!!!!!!
+
+    con.close()
 
 
 def load_image(name, colorkey=None):
@@ -36,12 +72,30 @@ def load_image(name, colorkey=None):
     return image
 
 
+# сохранение карты в базу данных.
+def savemap():
+    con = sqlite3.connect('Map.db')
+    cur = con.cursor()
+    Num = str(2)  # пока и так сойдет
+    Plat = ''  # Карооче, если ты это увидишь просто напиши мне их позиции (и угл у панелек) ИЛИ напиши мне в личку это.
+    Bar = ''
+    Lad = ''
+    Startpos = ''
+    Finishpos = ''
+    cur.execute("INSERT INTO data(Number, Platform, Barrel, Ladder, Startpos, Finishpos) VALUES (?, ?, ?, ?, ?, ?)",
+                (Num, Plat, Bar, Lad, Startpos, Finishpos))
+    cur.close()
+    con.close()
+
+
 class Platform(pygame.sprite.Sprite):
-    """Класс платформы. По ним персонаж будет ходить, а бочки катиться"""
+    """Класс платформы. По ним персонаж будет ходить, а бочки катиться"""  # или не будут))
+
+    image = load_image("platform.png")  # Загружаем изображение платформы из файла
 
     def __init__(self, group, pos):
         super().__init__(group)
-        self.image = self.old_im = pygame.transform.scale(load_image("platform.png"), PLATFORM_SIZE)
+        self.image = self.old_im = pygame.transform.scale(Platform.image, PLATFORM_SIZE)
         self.rect = self.image.get_rect()
         self.mask = pygame.mask.from_surface(self.image)
         self.rect.x, self.rect.y = pos
@@ -66,9 +120,11 @@ class Platform(pygame.sprite.Sprite):
 class Ladder(pygame.sprite.Sprite):
     """Класс лестницы. По ним персонаж будет лазить"""
 
+    image = load_image("ladder.png")
+
     def __init__(self, group, pos):
         super().__init__(group)
-        self.image = pygame.transform.scale(load_image("ladder.png"), LADDER_SIZE)
+        self.image = pygame.transform.scale(Ladder.image, LADDER_SIZE)
         self.rect = self.image.get_rect()
         self.mask = pygame.mask.from_surface(self.image)
         self.rect.x, self.rect.y = pos
@@ -77,14 +133,17 @@ class Ladder(pygame.sprite.Sprite):
 class Barrel(pygame.sprite.Sprite):
     """Класс бочки. Она катится по платформам и взрывается при контакте с ней персонажа"""
 
+    image = load_image("barrel.png")
+    boom = gif("images/boom.gif")
+
     def __init__(self, group, pos):
         super().__init__(group)
 
-        self.image = self.old_im = pygame.transform.scale(load_image("barrel.png"), BARREL_SIZE)
+        self.image = self.old_im = pygame.transform.scale(Barrel.image, BARREL_SIZE)
         self.rect = self.image.get_rect()
         self.mask = pygame.mask.from_surface(self.image)
         self.rect.x, self.rect.y = pos
-        self.boom = gif("images/boom.gif")
+        self.boom = Barrel.boom.copy()
         self.speed = 0
         self.angle = 0
         self.reserve_impulse = 0
@@ -105,7 +164,7 @@ class Barrel(pygame.sprite.Sprite):
         cent = self.get_center()
         return Thread(target=for_thread, args=(self.boom,)), self.boom, (cent[0] - 55, cent[1] - 60)
 
-    def move(self, platforms, booms, barrels, enemy, is_gameover, screen, ladders, x=0, y=0):
+    def move(self, x=0, y=0):
 
         self.rect = self.rect.move(x, 0)
         ss = pygame.sprite.spritecollide(self, platforms, dokill=False)
@@ -137,9 +196,9 @@ class Barrel(pygame.sprite.Sprite):
             t.start()
             booms.append(boom_info)
             enemy.kill()
-            Thread(target=gameover, args=[is_gameover, platforms, barrels, ladders, booms, screen]).start()
+            Thread(target=gameover).start()
 
-    def speed_update(self, platforms):
+    def speed_update(self):
         """Изменяем скорость бочки в зависимости от положения платформы под ней"""
 
         self.rect = self.rect.move(0, 1)
@@ -160,9 +219,9 @@ class Barrel(pygame.sprite.Sprite):
 
         self.rect = self.rect.move(0, -1)
 
-    def update(self, platforms, booms, barrels, enemy, is_gameover, screen, ladders):
+    def update(self):
 
-        self.speed_update(platforms)
+        self.speed_update()
 
         if self.speed < 0:
             self.angle += BARREL_ROTATION
@@ -183,9 +242,9 @@ class Barrel(pygame.sprite.Sprite):
 
         delta = 1 if self.speed > 0 else -1
         for _ in range(*sorted((self.speed, 0))):
-            self.move(platforms, booms, barrels, enemy, is_gameover, ladders, screen, x=delta)
+            self.move(x=delta)
         for _ in range(FALLING_SPEED):
-            self.move(platforms, booms, barrels, enemy, is_gameover, ladders, screen, y=1)
+            self.move(y=1)
 
         super().update()
 
@@ -194,22 +253,23 @@ class Enemy(pygame.sprite.Sprite):
     """Класс персонажа, которым собственно и управляет игрок))"""
 
     # Подгружаем 2 состояния персонажа (с разным положением ног для имитации шагов)
+    image1 = load_image("skin_1_1.png")
+    image2 = load_image("skin_1_2.png")
+
     # image1 = load_image("character_1.png")
     # image2 = load_image("character_2.png")
 
     def __init__(self, group, pos):
         super().__init__(group)
-        self.image1 = load_image("skin_1_1.png")
-        self.image2 = load_image("skin_1_2.png")
         self.active_step = 0
         self.rotation = RIGHT
-        self.image = pygame.transform.scale(self.image1, CHARACTER_SIZE)
+        self.image = pygame.transform.scale(Enemy.image1, CHARACTER_SIZE)
         self.rect = self.image.get_rect()
         self.climbing = False
         self.mask = pygame.mask.from_surface(self.image)
         self.spawn(pos)
 
-    def move(self, platforms, ladders, barrels, booms, is_gameover, screen, x=0, y=0):
+    def move(self, x=0, y=0):
         """Метод для передвижения персонажа. Передаётся перемещение по осям X и Y"""
 
         if x > 0:
@@ -269,9 +329,9 @@ class Enemy(pygame.sprite.Sprite):
                 t.start()
                 booms.append(boom_info)
                 self.kill()
-                Thread(target=gameover, args=[is_gameover, platforms, barrels, ladders, booms, screen]).start()
+                Thread(target=gameover).start()
 
-    def can_jump(self, platforms, ladders):
+    def can_jump(self):
         """Проверка, есть ли от чего оттолкнуться для прыжка"""
 
         self.rect = self.rect.move(0, 1)
@@ -294,7 +354,7 @@ class Enemy(pygame.sprite.Sprite):
         """Шаг персонажа, т.е. смена его картинки"""
 
         self.active_step += 1
-        self.image = eval(f"pygame.transform.scale(self.image{self.active_step // 8 % 2 + 1}, CHARACTER_SIZE)")
+        self.image = eval(f"pygame.transform.scale(Enemy.image{self.active_step // 8 % 2 + 1}, CHARACTER_SIZE)")
         self.rotation = RIGHT
 
         x, y = self.rect.x, self.rect.y
@@ -326,14 +386,14 @@ class Nothing(pygame.sprite.Sprite):
         self.image = pygame.Surface((5, 5))
         self.rect = pygame.Rect(*pos, 5, 5)
 
-    def choose_platform(self, platforms):
+    def choose_platform(self):
         return pygame.sprite.spritecollideany(self, platforms)
 
-    def choose_ladder(self, ladders):
+    def choose_ladder(self):
         return pygame.sprite.spritecollideany(self, ladders)
 
 
-def gameover(is_gameover, platforms, barrels, ladders, booms, screen):
+def gameover():
     """Если мы проиграли, выводится соответствующее сообщение"""
 
     is_gameover[0] = True
@@ -350,53 +410,54 @@ def gameover(is_gameover, platforms, barrels, ladders, booms, screen):
     screen.blit(myText, (250, 200))
 
 
-def main():
-    # Инициалтзация pygame программы
-    pygame.init()
+# Создаём группы спрайтов
+platforms = pygame.sprite.Group()
+barrels = pygame.sprite.Group()
+ladders = pygame.sprite.Group()
+en = pygame.sprite.Group()
 
-    screen = pygame.display.set_mode(WINDOW_SIZE)
-    screen.fill(BACKGROUND_COLOR)
+# Подготавливаем программу к запуску игрового цикла
+bd(1)
+platforms.draw(screen)
+enemy = None
+clock = pygame.time.Clock()
+running = True
+booms = []
+is_gameover = [False]
+# Игровой цикл
+while running:
+    # Обрабатываем каждое событие циклом for
+    events = [pygame.event.EventType]
+    events = pygame.event.get() + events
+    events = events[:5]
+    for event in events:
+        if event.type == pygame.QUIT:
+            # Завершаем игровой цикл, если программу закрыли
+            running = False
 
-    # Создаём группы спрайтов
-    platforms = pygame.sprite.Group()
-    barrels = pygame.sprite.Group()
-    ladders = pygame.sprite.Group()
-    en = pygame.sprite.Group()
+        elif event.type == pygame.KEYDOWN:
+            platform = Nothing(pygame.mouse.get_pos()).choose_platform()
+            # Пока ALT и DEL будут служебными клавишами для всяких тестируемх штук
+            if platform:
+                if event.key == pygame.K_LALT:
+                    # По нажатию ALT разворачивается платформа, на которую наведена мышь
+                    platform.rotate(30)
+                elif event.key == pygame.K_DELETE:
+                    platform.kill()
 
-    # Подготавливаем программу к запуску игрового цикла
-    platforms.draw(screen)
-    enemy = None
-    clock = pygame.time.Clock()
-    running = True
-    booms = []
-    is_gameover = [False]
-
-    # Игровой цикл
-    while running:
-        # Обрабатываем каждое событие циклом for
-        events = [pygame.event.EventType]
-        events = pygame.event.get() + events
-        events = events[:5]
-        for event in events:
-            if event.type == pygame.QUIT:
-                # Завершаем игровой цикл, если программу закрыли
-                running = False
-
-            elif event.type == pygame.KEYDOWN:
-                platform = Nothing(pygame.mouse.get_pos()).choose_platform(platforms)
-                # Пока ALT и DEL будут служебными клавишами для всяких тестируемх штук
-                if platform:
-                    if event.key == pygame.K_LALT:
-                        # По нажатию ALT разворачивается платформа, на которую наведена мышь
-                        platform.rotate(30)
-                    elif event.key == pygame.K_DELETE:
-                        platform.kill()
-
-            elif event.type == pygame.MOUSEBUTTONDOWN:
-                # Обработка событий кликов мышкой
-
-                if event.button == 1:
-                    # Если клик левой кнопкой, рисуем...
+        elif event.type == pygame.MOUSEBUTTONDOWN:
+            # Обработка событий кликов мышкой
+            Accept_build = True
+            if event.button == 1:
+                # Если клик левой кнопкой, рисуем...
+                # отслеживаю нажатие клавишь
+                for i in buttons:
+                    if i[1] < event.pos[0] < i[1] + i[3] and i[2] < event.pos[1] < i[2] + i[4]:
+                        Accept_build = False
+                        # выбор действия при нажатии
+                        print("Just do it")
+                        savemap()
+                if Accept_build:
                     if pygame.key.get_pressed()[pygame.K_LCTRL]:
                         # лестницу, если зажата клавиша левый Ctrl
                         Ladder(ladders, event.pos)
@@ -404,80 +465,79 @@ def main():
                         # платформу
                         Platform(platforms, event.pos)
 
-                elif event.button == 3:
-                    # если правая кнопка мыши, помещаем персонажа в координаты нажатия
-                    if enemy:
-                        enemy.spawn(event.pos)
-                    else:
-                        enemy = Enemy(en, event.pos)
 
-                elif event.button == 2:
-                    # По нажатию на колёсико мыши создаётся бочка
-                    if barrels and pygame.key.get_pressed()[pygame.K_LCTRL]:
-                        # Если зажата клафиша CTRL, то бочка, на которой находится курсор, взрывается
-                        b = pygame.sprite.spritecollideany(Nothing(event.pos), barrels)
-                        if b:
-                            t, *boom_info = b.booom()
-                            t.start()
-                            booms.append(boom_info)
+            elif event.button == 3:
+                # если правая кнопка мыши, помещаем персонажа в координаты нажатия
+                if enemy:
+                    enemy.spawn(event.pos)
+                else:
+                    enemy = Enemy(en, event.pos)
 
-                    else:
-                        b = Barrel(barrels, event.pos)
+            elif event.button == 2:
+                # По нажатию на колёсико мыши создаётся бочка
+                if barrels and pygame.key.get_pressed()[pygame.K_LCTRL]:
+                    # Если зажата клафиша CTRL, то бочка, на которой находится курсор, взрывается
+                    b = pygame.sprite.spritecollideany(Nothing(event.pos), barrels)
+                    if b:
+                        t, *boom_info = b.booom()
+                        t.start()
+                        booms.append(boom_info)
 
-            elif enemy:
-                # Если персонаж существует, проверяем, нужно ли его двигать
+                else:
+                    b = Barrel(barrels, event.pos)
 
-                if pygame.key.get_pressed()[pygame.K_LEFT]:
-                    # Двигаем влево
-                    enemy.move(platforms, ladders, barrels, booms, is_gameover, screen, x=-3)
+        elif enemy:
+            # Если персонаж существует, проверяем, нужно ли его двигать
 
-                if pygame.key.get_pressed()[pygame.K_RIGHT]:
-                    # Двигаем вправо
-                    enemy.move(platforms, ladders, barrels, booms, is_gameover, screen, x=3)
+            if pygame.key.get_pressed()[pygame.K_LEFT]:
+                # Двигаем влево
+                enemy.move(x=-3)
 
-                if pygame.key.get_pressed()[pygame.K_SPACE] and enemy.can_jump(platforms, ladders):
-                    # Прыжок
-                    delta = 5 if enemy.climbing else 60
-                    enemy.move(platforms, ladders, barrels, booms, is_gameover, screen, y=-delta)
+            if pygame.key.get_pressed()[pygame.K_RIGHT]:
+                # Двигаем вправо
+                enemy.move(x=3)
 
-                if enemy.climbing:
-                    # Если герой на лестнице...
+            if pygame.key.get_pressed()[pygame.K_SPACE] and enemy.can_jump():
+                # Прыжок
+                delta = 5 if enemy.climbing else 60
+                enemy.move(y=-delta)
 
-                    if pygame.key.get_pressed()[pygame.K_UP]:
-                        # двигаем наверх
-                        enemy.move(platforms, ladders, barrels, booms, is_gameover, screen, y=-3)
+            if enemy.climbing:
+                # Если герой на лестнице...
 
-                    elif pygame.key.get_pressed()[pygame.K_DOWN]:
-                        # двигаем вниз
-                        enemy.move(platforms, ladders, barrels, booms, is_gameover, screen, y=3)
+                if pygame.key.get_pressed()[pygame.K_UP]:
+                    # двигаем наверх
+                    enemy.move(y=-3)
 
-        if enemy and not enemy.climbing:
-            # Если персонаж не на лестнице, на него действует гравитация
-            enemy.move(platforms, ladders, barrels, booms, is_gameover, screen, y=FALLING_SPEED)
+                elif pygame.key.get_pressed()[pygame.K_DOWN]:
+                    # двигаем вниз
+                    enemy.move(y=3)
 
-        if not is_gameover[0]:
-            screen.fill(BACKGROUND_COLOR)
+    if enemy and not enemy.climbing:
+        # Если персонаж не на лестнице, на него действует гравитация
+        enemy.move(y=FALLING_SPEED)
 
-        # Отрисовываем всё. что необходимо
-        platforms.draw(screen)
-        ladders.draw(screen)
+    if not is_gameover[0]:
+        screen.fill(BACKGROUND_COLOR)
 
-        # Воспроизводим анимацию взрывов
-        for boom in booms:
-            boom[0].render(screen, boom[1])
+    # Отрисовываем всё. что необходимо
+    platforms.draw(screen)
+    ladders.draw(screen)
+    # Отрисовка кнопки
+    draw_button(screen, buttons)
 
-        for bar in barrels:
-            bar.update(platforms, booms, barrels, enemy, is_gameover, ladders, screen)
+    # Воспроизводим анимацию взрывов
+    for boom in booms:
+        boom[0].render(screen, boom[1])
 
-        en.draw(screen)
-        barrels.draw(screen)
+    for bar in barrels:
+        bar.update()
 
-        pygame.display.flip()
-        clock.tick(FPS)
+    en.draw(screen)
+    barrels.draw(screen)
 
-    # Выходим из pygame по завершении игрового цикла
-    pygame.quit()
+    pygame.display.flip()
+    clock.tick(FPS)
 
-
-if __name__ == '__main__':
-    main()
+# Выходим из pygame по завершении игрового цикла
+pygame.quit()

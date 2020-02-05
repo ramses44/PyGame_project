@@ -26,11 +26,10 @@ pygame.init()
 
 screen = pygame.display.set_mode(WINDOW_SIZE)
 screen.fill(BACKGROUND_COLOR)
-
 # База данных карт, вводится номер карты.
 def bd(number):
     # преобразую базу данных
-    dict_Plat = dict()
+    dict_Plat = list()
     dict_Ladd = list()
     dict_Barrel = list()
     startpos = (0, 0)
@@ -42,13 +41,22 @@ def bd(number):
               WHERE Number == ?""", str(int(number)))
     for elem in result:
         for i in elem[1].split(';'):
-            dict_Plat[i.split(':')[0]] = i.split(':')[1]
+            dict_Plat.append(((int(i.split(':')[0].split(',')[0]), int(i.split(':')[0].split(',')[1])), i.split(':')[1]))
         for i in elem[3].split(';'):
-            dict_Ladd.append(i)
+            dict_Ladd.append((int(i.split(',')[0]), int(i.split(',')[1])))
         for i in elem[2].split(';'):
-            dict_Barrel.append(i)
+            dict_Barrel.append((int(i.split(',')[0]), int(i.split(',')[1])))
         startpos = elem[4]
         finishpos = elem[5]
+    print(dict_Plat, 1, dict_Ladd, 2, dict_Barrel, 3)
+    for i in dict_Plat:
+        print(i[0])
+        Platform(platforms, i[0])
+    for i in dict_Ladd:
+        Ladder(ladders, i)
+    for i in dict_Barrel:
+        Barrel(barrels, i)
+
     # Когда разделим версии не забыть написать начальный ввод картинки!!!!!!!!!!!
 
     con.close()
@@ -76,14 +84,22 @@ def load_image(name, colorkey=None):
 def savemap():
     con = sqlite3.connect('Map.db')
     cur = con.cursor()
-    Num = str(2)  # пока и так сойдет
-    Plat = '' # Карооче, если ты это увидишь просто напиши мне их позиции (и угл у панелек) ИЛИ напиши мне в личку это.
-    Bar = ''
-    Lad = ''
-    Startpos = ''
-    Finishpos = ''
+    Num = str(1)  # пока и так сойдет
+    Plat = [] # Карооче, если ты это увидишь просто напиши мне их позиции (и угл у панелек) ИЛИ напиши мне в личку это.
+    Bar = []
+    Lad = []
+    Startpos = '0,0'
+    Finishpos = '100,100'
+    for sprite in platforms:
+        Plat.append(str(sprite.rect.x) + ',' + str(sprite.rect.y) + ':' + str(sprite.angle))
+    for sprite in barrels:
+        Bar.append(str(sprite.rect.x) + ',' + str(sprite.rect.y))
+    for sprite in ladders:
+        Lad.append(str(sprite.rect.x) + ',' + str(sprite.rect.y))
+    print(Num, ';'.join(Plat), ';'.join(Bar), ';'.join(Lad), Startpos, Finishpos)
     cur.execute("INSERT INTO data(Number, Platform, Barrel, Ladder, Startpos, Finishpos) VALUES (?, ?, ?, ?, ?, ?)",
-                (Num, Plat, Bar, Lad, Startpos, Finishpos))
+                (Num, ';'.join(Plat), ';'.join(Bar), ';'.join(Lad), Startpos, Finishpos))
+    con.commit()
     cur.close()
     con.close()
 
@@ -454,8 +470,11 @@ while running:
                     if i[1] < event.pos[0] < i[1] + i[3] and i[2] < event.pos[1] < i[2] + i[4]:
                         Accept_build = False
                         # выбор действия при нажатии
+
                         print("Just do it")
-                        savemap()
+
+
+
                 if Accept_build:
                     if pygame.key.get_pressed()[pygame.K_LCTRL]:
                         # лестницу, если зажата клавиша левый Ctrl

@@ -4,6 +4,7 @@ import os
 from GIFImage import GIFImage as gif
 import time
 from threading import Thread
+import sqlite3
 
 # Задаём все необходимые константы
 CHARACTER_SIZE = 60, 100
@@ -17,6 +18,7 @@ LEFT, RIGHT = False, True  # Нужны для разворота персона
 BACKGROUND_COLOR = [255] * 3
 FPS = 60
 JUMP_HEIGHT = 80
+BARRELS_SPAWN_FREQUENCY = 10
 
 
 def load_image(name, colorkey=None):
@@ -351,7 +353,56 @@ def gameover(is_gameover, platforms, barrels, ladders, booms, screen):
     screen.blit(myText, (250, 200))
 
 
-def main():
+# База данных карт, вводится номер карты.
+def bd(number):
+    # преобразую базу данных
+    dict_Plat = list()
+    dict_Ladd = list()
+    dict_Barrel = list()
+    startpos = (0, 0)
+    finishpos = (100, 100)
+
+    con = sqlite3.connect('Map.db')
+    cur = con.cursor()
+
+    # Выводим данные из базы данных
+    result = cur.execute("""SELECT * FROM data
+              WHERE id == ?""", str(int(number)))
+
+    for elem in result:
+
+        for i in elem[1].split(';'):
+            dict_Plat.append(
+                ((int(i.split(':')[0].split(',')[0]), int(i.split(':')[0].split(',')[1])), i.split(':')[1]))
+
+        for i in elem[3].split(';'):
+            dict_Ladd.append((int(i.split(',')[0]), int(i.split(',')[1])))
+
+        for i in elem[2].split(';'):
+            dict_Barrel.append((int(i.split(',')[0]), int(i.split(',')[1])))
+
+        startpos = elem[4]
+        finishpos = elem[5]
+
+    # print(dict_Plat, 1, dict_Ladd, 2, dict_Barrel, 3)
+
+    # for i in dict_Plat:
+    # Platform(platforms, i[0])
+
+    # for i in dict_Ladd:
+    # Ladder(ladders, i)
+
+    # for i in dict_Barrel:
+    # Barrel(barrels, i)
+
+    # Когда разделим версии не забыть написать начальный ввод картинки!!!!!!!!!!!
+
+    con.close()
+
+    return dict_Plat, dict_Ladd, dict_Barrel, startpos, finishpos
+
+
+def go(lvl):
     # Инициалтзация pygame программы
     pygame.init()
 
@@ -371,60 +422,44 @@ def main():
     running = True
     booms = []
     is_gameover = [False]
+    paused = False
+
+    map_ = bd(lvl)
+
+    for i in map_[0]:
+        p = Platform(platforms, i[0])
+        p.angle = int(i[1])
+
+    for i in map_[1]:
+        Ladder(ladders, i[0])
+
+    barrels_spawns = map_[2]
+
+    Enemy(en, map_[3])
+    finish_pos = map_[4]
 
     # Игровой цикл
     while running:
-        # Обрабатываем каждое событие циклом for
+
+        # Костыль)))
         events = [pygame.event.EventType]
         events = pygame.event.get() + events
         events = events[:5]
+
+        # Обрабатываем каждое событие циклом for
         for event in events:
             if event.type == pygame.QUIT:
                 # Завершаем игровой цикл, если программу закрыли
                 running = False
 
-            elif event.type == pygame.KEYDOWN and not is_gameover[0]:
-                platform = Nothing(pygame.mouse.get_pos()).choose_platform(platforms)
-                # Пока ALT и DEL будут служебными клавишами для всяких тестируемх штук
-                if platform:
-                    if event.key == pygame.K_LALT:
-                        # По нажатию ALT разворачивается платформа, на которую наведена мышь
-                        platform.rotate(30)
-                    elif event.key == pygame.K_DELETE:
-                        platform.kill()
+            elif event.type == pygame.KEYDOWN and not is_gameover[0] and event.key == pygame.K_p:
+                # Пауза
+                paused = not paused
+                continue
 
-            elif event.type == pygame.MOUSEBUTTONDOWN and not is_gameover[0]:
-                # Обработка событий кликов мышкой
-
-                if event.button == 1:
-                    # Если клик левой кнопкой, рисуем...
-                    if pygame.key.get_pressed()[pygame.K_LCTRL]:
-                        # лестницу, если зажата клавиша левый Ctrl
-                        Ladder(ladders, event.pos)
-                    else:
-                        # платформу
-                        Platform(platforms, event.pos)
-
-                elif event.button == 3:
-                    print(type(enemy))
-                    # если правая кнопка мыши, помещаем персонажа в координаты нажатия
-                    if enemy:
-                        enemy.spawn(event.pos)
-                    else:
-                        enemy = Enemy(en, event.pos)
-
-                elif event.button == 2:
-                    # По нажатию на колёсико мыши создаётся бочка
-                    if barrels and pygame.key.get_pressed()[pygame.K_LCTRL]:
-                        # Если зажата клафиша CTRL, то бочка, на которой находится курсор, взрывается
-                        b = pygame.sprite.spritecollideany(Nothing(event.pos), barrels)
-                        if b:
-                            t, *boom_info = b.booom()
-                            t.start()
-                            booms.append(boom_info)
-
-                    else:
-                        b = Barrel(barrels, event.pos)
+            elif event.type == pygame.MOUSEBUTTONDOWN and is_gameover[0]:
+                # Выходим, если после конца игры нажали мышью
+                return
 
             elif enemy and not is_gameover[0]:
                 # Если персонаж существует, проверяем, нужно ли его двигать
@@ -460,6 +495,9 @@ def main():
         if not is_gameover[0]:
             screen.fill(BACKGROUND_COLOR)
 
+        if paused:
+            pygame.time.wait(1000)
+
         # Отрисовываем всё. что необходимо
         platforms.draw(screen)
         ladders.draw(screen)
@@ -482,4 +520,4 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    go(0)

@@ -7,6 +7,7 @@ from threading import Thread
 from menu import draw_button
 import sqlite3
 
+
 # Задаём все необходимые константы
 CHARACTER_SIZE = 60, 100
 PLATFORM_SIZE = 150, 25
@@ -30,28 +31,49 @@ screen.fill(BACKGROUND_COLOR)
 # База данных карт, вводится номер карты.
 def bd(number):
     # преобразую базу данных
-    dict_Plat = dict()
+    dict_Plat = list()
     dict_Ladd = list()
     dict_Barrel = list()
     startpos = (0, 0)
     finishpos = (100, 100)
+
     con = sqlite3.connect('Map.db')
     cur = con.cursor()
+
     # Выводим данные из базы данных
     result = cur.execute("""SELECT * FROM data
-              WHERE Number == ?""", str(int(number)))
+              WHERE id == ?""", str(int(number)))
+
     for elem in result:
+
         for i in elem[1].split(';'):
-            dict_Plat[i.split(':')[0]] = i.split(':')[1]
+            dict_Plat.append(((int(i.split(':')[0].split(',')[0]), int(i.split(':')[0].split(',')[1])), i.split(':')[1]))
+
         for i in elem[3].split(';'):
-            dict_Ladd.append(i)
+            dict_Ladd.append((int(i.split(',')[0]), int(i.split(',')[1])))
+
         for i in elem[2].split(';'):
-            dict_Barrel.append(i)
+            dict_Barrel.append((int(i.split(',')[0]), int(i.split(',')[1])))
+
         startpos = elem[4]
         finishpos = elem[5]
+
+    # print(dict_Plat, 1, dict_Ladd, 2, dict_Barrel, 3)
+
+    # for i in dict_Plat:
+        # Platform(platforms, i[0])
+
+    # for i in dict_Ladd:
+        # Ladder(ladders, i)
+
+    # for i in dict_Barrel:
+        # Barrel(barrels, i)
+
     # Когда разделим версии не забыть написать начальный ввод картинки!!!!!!!!!!!
 
     con.close()
+
+    return dict_Plat, dict_Ladd, dict_Barrel, startpos, finishpos
 
 
 def load_image(name, colorkey=None):
@@ -73,18 +95,33 @@ def load_image(name, colorkey=None):
 
 
 # сохранение карты в базу данных.
-def savemap():
+def savemap(num):
+
     con = sqlite3.connect('Map.db')
     cur = con.cursor()
-    Num = str(2)  # пока и так сойдет
-    Plat = ''  # Карооче, если ты это увидишь просто напиши мне их позиции (и угл у панелек) ИЛИ напиши мне в личку это.
-    Bar = ''
-    Lad = ''
-    Startpos = ''
-    Finishpos = ''
-    cur.execute("INSERT INTO data(Number, Platform, Barrel, Ladder, Startpos, Finishpos) VALUES (?, ?, ?, ?, ?, ?)",
-                (Num, Plat, Bar, Lad, Startpos, Finishpos))
-    cur.close()
+
+    # Num = str(1)  # пока и так сойдет  # Нет, не сойдёт
+    Plat = []  # Карооче, если ты это увидишь просто напиши мне их позиции (и угл у панелек) ИЛИ напиши мне в личку это.
+    Bar = []
+    Lad = []
+    Startpos = '0,0'
+    Finishpos = '100,100'
+
+    for sprite in platforms:
+        Plat.append(str(sprite.rect.x) + ',' + str(sprite.rect.y) + ':' + str(sprite.angle))
+
+    for sprite in barrels:
+        Bar.append(str(sprite.rect.x) + ',' + str(sprite.rect.y))
+
+    for sprite in ladders:
+        Lad.append(str(sprite.rect.x) + ',' + str(sprite.rect.y))
+
+    print(num, ';'.join(Plat), ';'.join(Bar), ';'.join(Lad), Startpos, Finishpos)
+
+    cur.execute("INSERT INTO data(id, Platform, Barrel, Ladder, Startpos, Finishpos) VALUES (?, ?, ?, ?, ?, ?)",
+                (num, ';'.join(Plat), ';'.join(Bar), ';'.join(Lad), Startpos, Finishpos))
+
+    con.commit()
     con.close()
 
 
@@ -255,7 +292,6 @@ class Enemy(pygame.sprite.Sprite):
     # Подгружаем 2 состояния персонажа (с разным положением ног для имитации шагов)
     image1 = load_image("skin_1_1.png")
     image2 = load_image("skin_1_2.png")
-
     # image1 = load_image("character_1.png")
     # image2 = load_image("character_2.png")
 
@@ -354,7 +390,7 @@ class Enemy(pygame.sprite.Sprite):
         """Шаг персонажа, т.е. смена его картинки"""
 
         self.active_step += 1
-        self.image = eval(f"pygame.transform.scale(Enemy.image{self.active_step // 8 % 2 + 1}, CHARACTER_SIZE)")
+        self.image = eval(f"pygame.transform.scale(Enemy.image{self.active_step // 8 % 2  + 1}, CHARACTER_SIZE)")
         self.rotation = RIGHT
 
         x, y = self.rect.x, self.rect.y
@@ -450,13 +486,15 @@ while running:
             Accept_build = True
             if event.button == 1:
                 # Если клик левой кнопкой, рисуем...
-                # отслеживаю нажатие клавишь
+                    # отслеживаю нажатие клавишь
                 for i in buttons:
                     if i[1] < event.pos[0] < i[1] + i[3] and i[2] < event.pos[1] < i[2] + i[4]:
                         Accept_build = False
                         # выбор действия при нажатии
+                        savemap('0')
+
                         print("Just do it")
-                        savemap()
+
                 if Accept_build:
                     if pygame.key.get_pressed()[pygame.K_LCTRL]:
                         # лестницу, если зажата клавиша левый Ctrl
@@ -464,7 +502,6 @@ while running:
                     else:
                         # платформу
                         Platform(platforms, event.pos)
-
 
             elif event.button == 3:
                 # если правая кнопка мыши, помещаем персонажа в координаты нажатия
@@ -524,7 +561,7 @@ while running:
     platforms.draw(screen)
     ladders.draw(screen)
     # Отрисовка кнопки
-    draw_button(screen, buttons)
+    draw_button(screen, buttons, (0, 255, 0))
 
     # Воспроизводим анимацию взрывов
     for boom in booms:
@@ -538,6 +575,7 @@ while running:
 
     pygame.display.flip()
     clock.tick(FPS)
+
 
 # Выходим из pygame по завершении игрового цикла
 pygame.quit()

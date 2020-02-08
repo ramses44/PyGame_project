@@ -1,4 +1,3 @@
-import pygame
 from menu import draw_button
 from game import *
 import sqlite3
@@ -6,6 +5,28 @@ import sqlite3
 BLACK = [0]*3
 BUTTON_COLOR = [0, 255, 0]
 BACKGROUND_COLOR = [255]*3
+
+
+class StartPos(pygame.sprite.Sprite):
+    def __init__(self, group, pos):
+        super().__init__(group)
+        self.image = pygame.transform.scale(load_image("start.png"), (40, 40))
+        self.rect = self.image.get_rect()
+        self.rect.x, self.rect.y = pos
+
+    def move(self, x, y):
+        self.rect.x, self.rect.y = x, y
+
+
+class FinishPos(pygame.sprite.Sprite):
+    def __init__(self, group, pos):
+        super().__init__(group)
+        self.image = pygame.transform.scale(load_image("finish.png"), (40, 40))
+        self.rect = self.image.get_rect()
+        self.rect.x, self.rect.y = pos
+
+    def move(self, x, y):
+        self.rect.x, self.rect.y = x, y
 
 
 def savemap(num, platforms, barrels, ladders):
@@ -53,17 +74,24 @@ def start(screen):
         'barrel': (520, 5, BARREL_SIZE[0] + 10, BARREL_SIZE[1] + 10),
                 }
 
+    # Группы спрайтов
     examples = pygame.sprite.Group()
+    platforms = pygame.sprite.Group()
+    ladders = pygame.sprite.Group()
+    barrels = pygame.sprite.Group()
+    poses = pygame.sprite.Group()
+
+    # Образцы
     Platform(examples, (examples_rects['platform'][0] + 5, examples_rects['platform'][1] + 5))
     Ladder(examples, (examples_rects['ladder'][0] + 5, examples_rects['ladder'][1] + 5))
     Barrel(examples, (examples_rects['barrel'][0] + 5, examples_rects['barrel'][1] + 5))
 
-    # Группы спрайтов
-    platforms = pygame.sprite.Group()
-    ladders = pygame.sprite.Group()
-    barrels = pygame.sprite.Group()
+    start_ = StartPos(poses, (5, WINDOW_SIZE[1] // 2 - 20))
+    finish_ = FinishPos(poses, (WINDOW_SIZE[0] - 350, WINDOW_SIZE[1] // 2 - 20))
 
     running = True
+    choosing_start = False
+    choosing_finish = False
     screen.fill(BACKGROUND_COLOR)
     draw_selected = lambda: None
 
@@ -76,6 +104,15 @@ def start(screen):
                 break
 
             elif event.type == pygame.MOUSEBUTTONDOWN:
+
+                obj = pygame.sprite.spritecollideany(Nothing(pygame.mouse.get_pos()), poses)
+
+                if type(obj) == StartPos:
+                    choosing_start = not choosing_start
+                    continue
+                elif type(obj) == FinishPos:
+                    choosing_finish = not choosing_finish
+                    continue
 
                 obj = pygame.sprite.spritecollideany(Nothing(pygame.mouse.get_pos()), examples)
 
@@ -115,6 +152,11 @@ def start(screen):
                     if obj:
                         obj.rotate(30)
 
+        if choosing_start:
+            start_.move(*pygame.mouse.get_pos())
+        if choosing_finish:
+            finish_.move(*pygame.mouse.get_pos())
+
         screen.fill(BACKGROUND_COLOR)
         draw_button(screen, [btn], BUTTON_COLOR)
         draw_selected()
@@ -122,6 +164,7 @@ def start(screen):
         platforms.draw(screen)
         ladders.draw(screen)
         barrels.draw(screen)
+        poses.draw(screen)
         pygame.display.flip()
 
 

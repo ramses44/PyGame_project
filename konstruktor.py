@@ -7,29 +7,7 @@ BUTTON_COLOR = [0, 255, 0]
 BACKGROUND_COLOR = [255]*3
 
 
-class StartPos(pygame.sprite.Sprite):
-    def __init__(self, group, pos):
-        super().__init__(group)
-        self.image = pygame.transform.scale(load_image("start.png"), (40, 40))
-        self.rect = self.image.get_rect()
-        self.rect.x, self.rect.y = pos
-
-    def move(self, x, y):
-        self.rect.x, self.rect.y = x, y
-
-
-class FinishPos(pygame.sprite.Sprite):
-    def __init__(self, group, pos):
-        super().__init__(group)
-        self.image = pygame.transform.scale(load_image("finish.png"), (40, 40))
-        self.rect = self.image.get_rect()
-        self.rect.x, self.rect.y = pos
-
-    def move(self, x, y):
-        self.rect.x, self.rect.y = x, y
-
-
-def savemap(num, platforms, barrels, ladders):
+def savemap(num, platforms, barrels, ladders, start, finish):
     """Функция сохранения карты в БД"""
 
     con = sqlite3.connect('Map.db')
@@ -39,11 +17,13 @@ def savemap(num, platforms, barrels, ladders):
     plat = []  # Карооче, если ты это увидишь просто напиши мне их позиции (и угл у панелек) ИЛИ напиши мне в личку это.
     bar = []
     lad = []
-    startpos = '0,0'
-    finishpos = '100,100'
+    startpos = ",".join((str(start.rect.x), str(start.rect.y)))
+    finishpos = ",".join((str(finish.rect.x), str(finish.rect.y)))
 
     for sprite in platforms:
-        plat.append(str(sprite.rect.x) + ',' + str(sprite.rect.y) + ':' + str(sprite.angle))
+        angle = sprite.angle
+        sprite.rotate(-angle)
+        plat.append(str(sprite.rect.x) + ',' + str(sprite.rect.y) + ':' + str(angle))
 
     for sprite in barrels:
         bar.append(str(sprite.rect.x) + ',' + str(sprite.rect.y))
@@ -53,6 +33,7 @@ def savemap(num, platforms, barrels, ladders):
 
     print(num, ';'.join(plat), ';'.join(bar), ';'.join(lad), startpos, finishpos)
 
+    cur.execute("""DELETE FROM data WHERE id == 0""")
     cur.execute("INSERT INTO data(id, Platform, Barrel, Ladder, Startpos, Finishpos) VALUES (?, ?, ?, ?, ?, ?)",
                 (num, ';'.join(plat), ';'.join(bar), ';'.join(lad), startpos, finishpos))
 
@@ -86,8 +67,8 @@ def start(screen):
     Ladder(examples, (examples_rects['ladder'][0] + 5, examples_rects['ladder'][1] + 5))
     Barrel(examples, (examples_rects['barrel'][0] + 5, examples_rects['barrel'][1] + 5))
 
-    start_ = StartPos(poses, (5, WINDOW_SIZE[1] // 2 - 20))
-    finish_ = FinishPos(poses, (WINDOW_SIZE[0] - 350, WINDOW_SIZE[1] // 2 - 20))
+    start_ = StartPos(poses, (5, 100))
+    finish_ = FinishPos(poses, (45, 100))
 
     running = True
     choosing_start = False
@@ -132,7 +113,7 @@ def start(screen):
                 if btn[1] < event.pos[0] < btn[1] + btn[3] and \
                         btn[2] < event.pos[1] < btn[2] + btn[4]:
 
-                    savemap('0', platforms, barrels, ladders)
+                    savemap('0', platforms, barrels, ladders, start_, finish_)
                     running = False
                     break
 
@@ -171,6 +152,6 @@ def start(screen):
 if __name__ == "__main__":
     pygame.init()
 
-    screen = pygame.display.set_mode((700, 500))
+    screen = pygame.display.set_mode(*WINDOW_SIZE)
     start(screen)
     pygame.quit()

@@ -38,7 +38,7 @@ def main():
                             # выбор действия при нажатии
 
                             if i[0] == 'Start':
-                                # running = False
+                                running = False
                                 res = Maplvl.choose_lvl()
 
                                 if res == 'Back':
@@ -53,12 +53,13 @@ def main():
                             elif i[0] == 'Stats':
                                 pass
                             elif i[0] == 'Exit':
-                                return True
+                                running = False
 
 
 if __name__ == '__main__':
     r = main()
-    # while not r:
-        # r = main()
+    while not r:
+        r = main()
+        # pygame.quit()
 
 

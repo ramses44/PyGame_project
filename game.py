@@ -304,6 +304,13 @@ class Enemy(pygame.sprite.Sprite):
                     args=[is_gameover, platforms, barrels, ladders, booms, flags, screen]
                 ).start()
 
+        if self.rect.y > DEAD_HIGH:
+            self.kill()
+            Thread(
+                target=gameover,
+                args=[is_gameover, platforms, barrels, ladders, booms, flags, screen]
+            ).start()
+
     def can_jump(self, platforms, ladders):
         """Проверка, есть ли от чего оттолкнуться для прыжка"""
 
@@ -369,19 +376,22 @@ class Nothing(pygame.sprite.Sprite):
 def gameover(is_gameover, platforms, barrels, ladders, booms, flags, screen):
     """Если мы проиграли, выводится соответствующее сообщение"""
 
-    is_gameover[0] = True
-    time.sleep(4)
+    try:
+        is_gameover[0] = True
+        time.sleep(4)
 
-    platforms.empty()
-    barrels.empty()
-    ladders.empty()
-    flags.empty()
-    booms.clear()
-    screen.fill((0, 0, 0))
+        platforms.empty()
+        barrels.empty()
+        ladders.empty()
+        flags.empty()
+        booms.clear()
+        screen.fill((0, 0, 0))
 
-    myFont = pygame.font.SysFont("Comic Sans MS", 100)
-    myText = myFont.render("Game Over", 1, (0, 255, 0))
-    screen.blit(myText, (250, 200))
+        myFont = pygame.font.SysFont("Comic Sans MS", 100)
+        myText = myFont.render("Game Over", 1, (0, 255, 0))
+        screen.blit(myText, (250, 200))
+    except pygame.error:
+        pass
 
 
 def gg(is_gameover, platforms, barrels, ladders, booms, flags, screen, enemy):
@@ -549,9 +559,6 @@ def go(lvl):
         if enemy and not enemy.climbing:
             # Если персонаж не на лестнице, на него действует гравитация
             enemy.move(platforms, ladders, barrels, booms, is_gameover, screen, flags, y=FALLING_SPEED)
-            if enemy.rect.y > DEAD_HIGH:
-                enemy.kill()
-                gameover(is_gameover, platforms, barrels, ladders, booms, flags, screen)
 
         if not is_gameover[0]:
             screen.fill(BACKGROUND_COLOR)
@@ -576,6 +583,8 @@ def go(lvl):
 
         pygame.display.flip()
         clock.tick(FPS)
+
+    pygame.quit()
 
 
 if __name__ == '__main__':

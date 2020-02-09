@@ -24,8 +24,7 @@ def lvl():
         # Открываем конструктор пользовательского уровня
         konstruktor.konstrukt()
         return
-
-    else:
+    elif res:
         res = res.replace("User\'s lvl", "0")  # Меняем на номер уровня 0
 
         # Запускаем нужный уровень
@@ -47,7 +46,7 @@ def lvl():
                 con.commit()
                 con.close()
 
-        lvl()
+    lvl()
 
 
 def main():

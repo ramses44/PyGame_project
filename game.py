@@ -413,6 +413,7 @@ def gg(is_gameover, platforms, barrels, ladders, booms, flags, screen, enemy, st
     myText = myFont.render("Level Completed!", 1, (0, 255, 0))
     screen.blit(myText, (120, 200))
 
+
 # База данных карт, вводится номер карты.
 def bd(number):
     # преобразую базу данных
@@ -432,13 +433,19 @@ def bd(number):
     for elem in result:
 
         for i in elem[1].split(';'):
+            if not i:
+                break
             dict_Plat.append(
                 ((int(i.split(':')[0].split(',')[0]), int(i.split(':')[0].split(',')[1])), i.split(':')[1]))
 
         for i in elem[3].split(';'):
+            if not i:
+                break
             dict_Ladd.append((int(i.split(',')[0]), int(i.split(',')[1])))
 
         for i in elem[2].split(';'):
+            if not i:
+                break
             dict_Barrel.append((int(i.split(',')[0]), int(i.split(',')[1])))
 
         startpos = [int(i) for i in elem[4].split(",")]

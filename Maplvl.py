@@ -40,15 +40,14 @@ def choose_lvl():
 
     screen = pygame.display.set_mode(WINDOW_SIZE)
     screen.fill(BACKGROUND_COLOR)
-    running = True
     draw_button(screen, buttons)
     pygame.display.flip()
-    while running:
+    while True:
         # Обрабатываем каждое событие циклом for
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 # Завершаем игровой цикл, если программу закрыли
-                running = False
+                return "Back"
             # отслеживание нажатий кнопки
             elif event.type == pygame.MOUSEBUTTONDOWN:
                 if event.button == 1:
@@ -57,7 +56,7 @@ def choose_lvl():
                             # выбор действия при нажатии
                             for j in range(12):
                                 if i[0] == buttons[j][0]:
-                                    return i[0]
+                                    return i[0] if i[-1] == UNLOCKED else None
 
 
 if __name__ == "__main__":

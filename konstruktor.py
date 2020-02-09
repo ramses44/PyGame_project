@@ -5,7 +5,7 @@ import sqlite3
 BLACK = [0]*3
 BUTTON_COLOR = [0, 255, 0]
 BACKGROUND_COLOR = [255]*3
-POX = '6'
+POX = '0'
 
 
 def savemap(num, platforms, barrels, ladders, start, finish):
@@ -168,7 +168,7 @@ def start(screen, load=False):
 
 def konstrukt():
     screen = pygame.display.set_mode(*WINDOW_SIZE)
-    start(screen, True)
+    start(screen)
 
 
 if __name__ == "__main__":

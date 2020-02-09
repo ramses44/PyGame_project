@@ -19,6 +19,7 @@ FPS = 45
 JUMP_HEIGHT = 100
 BARRELS_SPAWN_FREQUENCY = 10
 WINDOW_SIZE = [(1000, 600), ]  # pygame.FULLSCREEN]
+DEAD_HIGH = 600
 
 
 
@@ -546,6 +547,9 @@ def go(lvl):
         if enemy and not enemy.climbing:
             # Если персонаж не на лестнице, на него действует гравитация
             enemy.move(platforms, ladders, barrels, booms, is_gameover, screen, flags, y=FALLING_SPEED)
+            if enemy.rect.y > DEAD_HIGH:
+                enemy.kill()
+                gameover(is_gameover, platforms, barrels, ladders, booms, flags, screen)
 
         if not is_gameover[0]:
             screen.fill(BACKGROUND_COLOR)

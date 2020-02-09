@@ -22,7 +22,6 @@ WINDOW_SIZE = [(1000, 600), ]  # pygame.FULLSCREEN]
 DEAD_HIGH = 600
 
 
-
 def load_image(name, colorkey=None):
     """Функция для открытия изображения в pygame.image"""
 
@@ -39,6 +38,15 @@ def load_image(name, colorkey=None):
         image.set_alpha(0)
 
     return image
+
+
+def get_map(lvl):
+    con = sqlite3.connect("Map.db")
+    cur = con.cursor()
+    old_rec = cur.execute(
+        """SELECT * FROM data WHERE id == ?""", (str(lvl),)).fetchone()
+    con.close()
+    return old_rec
 
 
 class StartPos(pygame.sprite.Sprite):
@@ -273,15 +281,7 @@ class Enemy(pygame.sprite.Sprite):
                 if stop:
                     break
 
-            ss = pygame.sprite.spritecollide(self, ladders, dokill=False)
-            for s in ss:
-                if pygame.sprite.collide_mask(self, s):
-                    if not self.climbing:
-                        stop = True
-                    break
-            else:
-                self.climbing = False
-            if stop:
+            if pygame.sprite.spritecollideany(self, ladders) and not self.climbing:
                 break
 
         ss = pygame.sprite.spritecollide(self, ladders, dokill=False)
@@ -394,8 +394,10 @@ def gameover(is_gameover, platforms, barrels, ladders, booms, flags, screen):
         pass
 
 
-def gg(is_gameover, platforms, barrels, ladders, booms, flags, screen, enemy):
+def gg(is_gameover, platforms, barrels, ladders, booms, flags, screen, enemy, st_time, d_time):
     """Good Game - Well played"""
+
+    d_time[0] = int(time.time() - st_time)
 
     is_gameover[0] = True
 
@@ -449,6 +451,8 @@ def bd(number):
 
 
 def go(lvl):
+    """Основная функция игрового цикла"""
+
     # Инициалтзация pygame программы
     pygame.init()
 
@@ -469,6 +473,10 @@ def go(lvl):
     booms = []
     is_gameover = [False]
     paused = False
+
+    # Засекаем время
+    start_time = time.time()
+    delta_time = [None]
 
     # Загружаем карту из БД
     map_ = bd(lvl)
@@ -576,7 +584,8 @@ def go(lvl):
             boom[0].render(screen, boom[1])
 
         if pygame.sprite.collide_mask(enemy, finish):
-            gg(is_gameover, platforms, barrels, ladders, booms, flags, screen, enemy)
+            gg(is_gameover, platforms, barrels, ladders,
+               booms, flags, screen, enemy, start_time, delta_time)
 
         en.draw(screen)
         barrels.draw(screen)
@@ -585,6 +594,8 @@ def go(lvl):
         clock.tick(FPS)
 
     pygame.quit()
+
+    return delta_time[0]
 
 
 if __name__ == '__main__':

@@ -1,29 +1,11 @@
 import pygame
 import sqlite3
+from btn import draw_button
 
 WINDOW_SIZE = 380, 600
 BACKGROUND_COLOR = (255, 255, 255)
 UNLOCKED = (0, 255, 0)
 LOCKED = [128] * 3
-TEXT_FONT_SIZE = 30
-
-
-# отрисовка кнопок
-def draw_button(screen, buttons):
-    for i in buttons:
-        pygame.draw.rect(screen, i[-1], (i[1], i[2], i[3], i[4]), 2)
-        text = i[0]
-        length = i[3]
-        height = i[4]
-        try:
-            int(text)
-            font_size = length // len(text)
-        except ValueError:
-            font_size = TEXT_FONT_SIZE
-        myFont = pygame.font.SysFont("Comic Sans MS", font_size)
-        myText = myFont.render(text, 1, i[-1])
-        screen.blit(myText, ((i[1] + length // 2) - myText.get_width() // 2,
-                             (i[2] + height // 2) - myText.get_height() // 2))
 
 
 def choose_lvl():

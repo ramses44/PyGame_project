@@ -1,4 +1,4 @@
-from menu import draw_button
+from btn import draw_button
 from game import *
 import sqlite3
 
@@ -46,7 +46,7 @@ def start(screen, load=False):
     """Функция запускающая окно коснтруктора уровней"""
 
     # Кнопка сохранения
-    btn = ["Создать", 10, 10, 200, 80]
+    btn = ["Создать", 10, 10, 200, 80, BUTTON_COLOR]
 
     # Это для выбора элемента, который мы ставим кнопкой мыши
     selected = None
@@ -156,7 +156,7 @@ def start(screen, load=False):
             finish_.move(*pygame.mouse.get_pos())
 
         screen.fill(BACKGROUND_COLOR)
-        draw_button(screen, [btn], BUTTON_COLOR)
+        draw_button(screen, [btn])
         draw_selected()
         examples.draw(screen)
         platforms.draw(screen)

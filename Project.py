@@ -4,7 +4,7 @@ import os
 from GIFImage import GIFImage as gif
 import time
 from threading import Thread
-from menu import draw_button
+from btn import draw_button
 import sqlite3
 
 

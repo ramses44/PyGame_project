@@ -579,5 +579,5 @@ def go(lvl):
 
 
 if __name__ == '__main__':
-    go(0)
+    go(6)
     pygame.quit()

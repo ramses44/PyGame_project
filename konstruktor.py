@@ -33,7 +33,7 @@ def savemap(num, platforms, barrels, ladders, start, finish):
 
     print(num, ';'.join(plat), ';'.join(bar), ';'.join(lad), startpos, finishpos)
 
-    cur.execute("""DELETE FROM data WHERE id == 0""")
+    cur.execute("""DELETE FROM data WHERE id == ?""", num)
     cur.execute("INSERT INTO data(id, Platform, Barrel, Ladder, Startpos, Finishpos) VALUES (?, ?, ?, ?, ?, ?)",
                 (num, ';'.join(plat), ';'.join(bar), ';'.join(lad), startpos, finishpos))
 

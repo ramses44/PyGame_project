@@ -7,18 +7,19 @@ from threading import Thread
 import sqlite3
 
 # Задаём все необходимые константы
-CHARACTER_SIZE = 30, 50
-PLATFORM_SIZE = 100, 15
+CHARACTER_SIZE = 45, 75
+PLATFORM_SIZE = 130, 17
 LADDER_SIZE = 30, 100
-BARREL_SIZE = 20, 20
-FALLING_SPEED = 4  # Скорость падения (pixels/tick)
+BARREL_SIZE = 40, 40
+FALLING_SPEED = 2  # Скорость падения (pixels/tick)
 BARREL_ROTATION = 3
 LEFT, RIGHT = False, True  # Нужны для разворота персонажа направо/налево
 BACKGROUND_COLOR = [255] * 3
-FPS = 30
-JUMP_HEIGHT = 60
+FPS = 45
+JUMP_HEIGHT = 100
 BARRELS_SPAWN_FREQUENCY = 10
 WINDOW_SIZE = [(1000, 600), ]  # pygame.FULLSCREEN]
+
 
 
 def load_image(name, colorkey=None):

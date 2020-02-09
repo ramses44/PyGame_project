@@ -370,7 +370,7 @@ def gameover(is_gameover, platforms, barrels, ladders, booms, flags, screen):
     """Если мы проиграли, выводится соответствующее сообщение"""
 
     is_gameover[0] = True
-    time.sleep(6)
+    time.sleep(4)
 
     platforms.empty()
     barrels.empty()
@@ -503,6 +503,7 @@ def go(lvl):
             if event.type == pygame.QUIT:
                 # Завершаем игровой цикл, если программу закрыли
                 running = False
+                break
 
             elif event.type == pygame.KEYDOWN and not is_gameover[0] and event.key == pygame.K_p:
                 # Пауза
@@ -511,7 +512,8 @@ def go(lvl):
 
             elif event.type == pygame.MOUSEBUTTONDOWN and is_gameover[0]:
                 # Выходим, если после конца игры нажали мышью
-                return
+                running = False
+                break
 
             elif enemy and not is_gameover[0]:
                 # Если персонаж существует, проверяем, нужно ли его двигать

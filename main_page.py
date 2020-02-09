@@ -1,6 +1,7 @@
 import pygame
 import Maplvl
 from menu import draw_button
+import konstruktor
 import game
 
 # Задаём все необходимые константы
@@ -27,7 +28,7 @@ def main():
 
             if event.type == pygame.QUIT:
                 # Завершаем игровой цикл, если программу закрыли
-                running = False
+                return True
 
             # отслеживание нажатий кнопки
             elif event.type == pygame.MOUSEBUTTONDOWN:
@@ -37,20 +38,27 @@ def main():
                             # выбор действия при нажатии
 
                             if i[0] == 'Start':
-                                running = False
+                                # running = False
                                 res = Maplvl.choose_lvl()
 
                                 if res == 'Back':
-                                    return True
+                                    pass
+                                elif res == 'Create lvl':
+                                    konstruktor.konstrukt()
+                                elif res == 'User\'s lvl':
+                                    game.go(0)
+                                else:
+                                    game.go(int(res))
 
                             elif i[0] == 'Stats':
                                 pass
                             elif i[0] == 'Exit':
-                                running = False
-                            pass
+                                return True
 
 
 if __name__ == '__main__':
     r = main()
-    while r:
-        r = main()
+    # while not r:
+        # r = main()
+
+

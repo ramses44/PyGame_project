@@ -5,6 +5,7 @@ import sqlite3
 BLACK = [0]*3
 BUTTON_COLOR = [0, 255, 0]
 BACKGROUND_COLOR = [255]*3
+POX = '0'
 
 
 def savemap(num, platforms, barrels, ladders, start, finish):
@@ -41,7 +42,7 @@ def savemap(num, platforms, barrels, ladders, start, finish):
     con.close()
 
 
-def start(screen):
+def start(screen, load=False):
     """Функция запускающая окно коснтруктора уровней"""
 
     # Кнопка сохранения
@@ -75,6 +76,22 @@ def start(screen):
     choosing_finish = False
     screen.fill(BACKGROUND_COLOR)
     draw_selected = lambda: None
+
+    if load:
+        map_ = bd(POX)
+
+        start_ = StartPos(poses, map_[3])
+        finish_ = FinishPos(poses, map_[4])
+
+        for i in map_[0]:
+            p = Platform(platforms, i[0])
+            p.rotate(int(i[1]))
+
+        for i in map_[1]:
+            Ladder(ladders, i)
+
+        for i in map_[2]:
+            Barrel(barrels, i)
 
     while running:  # Цикл-обработчик
         for event in pygame.event.get():
@@ -113,7 +130,7 @@ def start(screen):
                 if btn[1] < event.pos[0] < btn[1] + btn[3] and \
                         btn[2] < event.pos[1] < btn[2] + btn[4]:
 
-                    savemap('0', platforms, barrels, ladders, start_, finish_)
+                    savemap(POX, platforms, barrels, ladders, start_, finish_)
                     running = False
                     break
 
@@ -149,9 +166,12 @@ def start(screen):
         pygame.display.flip()
 
 
+def konstrukt():
+    screen = pygame.display.set_mode(*WINDOW_SIZE)
+    start(screen, True)
+
+
 if __name__ == "__main__":
     pygame.init()
-
-    screen = pygame.display.set_mode(*WINDOW_SIZE)
-    start(screen)
+    konstrukt()
     pygame.quit()

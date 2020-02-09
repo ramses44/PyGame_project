@@ -5,7 +5,7 @@ import sqlite3
 BLACK = [0]*3
 BUTTON_COLOR = [0, 255, 0]
 BACKGROUND_COLOR = [255]*3
-POX = '0'
+POX = '6'
 
 
 def savemap(num, platforms, barrels, ladders, start, finish):

@@ -91,6 +91,7 @@ def main():
                                 stats.load()
 
                             elif i[0] == 'Exit':
+                                print('Exit')
                                 # Функция не запустится вновь
                                 return True
 
@@ -99,5 +100,6 @@ if __name__ == '__main__':
     r = main()
     while not r:  # Пока функция не вернёт True, перезапускаем её
         r = main()
+    pygame.quit()
 
 

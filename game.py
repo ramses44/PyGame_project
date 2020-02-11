@@ -20,6 +20,7 @@ JUMP_HEIGHT = 100
 BARRELS_SPAWN_FREQUENCY = 10
 WINDOW_SIZE = [(1000, 600), ]  # pygame.FULLSCREEN]
 DEAD_HIGH = 600
+JUMP_PER_TICK = 15
 
 
 def load_image(name, colorkey=None):
@@ -524,6 +525,7 @@ def go(lvl):
     booms = []
     is_gameover = [False]
     paused = False
+    jump_impulse = 0
 
     # Засекаем время
     start_time = time.time()
@@ -597,7 +599,16 @@ def go(lvl):
 
                 if pygame.key.get_pressed()[pygame.K_SPACE] and enemy.can_jump(platforms, ladders):
                     # Прыжок
-                    delta = 5 if enemy.climbing else JUMP_HEIGHT
+                    jump_impulse = 5 if enemy.climbing else JUMP_HEIGHT
+
+                if jump_impulse:
+                    if jump_impulse >= JUMP_PER_TICK:
+                        jump_impulse -= JUMP_PER_TICK
+                        delta = JUMP_PER_TICK
+                    else:
+                        delta = jump_impulse
+                        jump_impulse = 0
+
                     enemy.move(platforms, ladders, barrels, booms, is_gameover, screen, flags, y=-delta)
 
                 if enemy.climbing:

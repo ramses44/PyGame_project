@@ -21,3 +21,6 @@ def draw_button(screen, buttons):
         screen.blit(myText, ((i[1] + length // 2) - myText.get_width() // 2,
                              (i[2] + height // 2) - myText.get_height() // 2))
 
+
+
+

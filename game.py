@@ -84,6 +84,9 @@ class Platform(pygame.sprite.Sprite):
         self.rect.x, self.rect.y = pos
         self.angle = 0
 
+    def get_center(self):
+        return self.rect.x + self.rect.size[0] // 2, self.rect.y + self.rect.size[1] // 2
+
     def rotate(self, angle):
         """Метод поворота (наклона) платформы (платформа вращается вокруг центра. Передаётся угол"""
 
@@ -247,6 +250,9 @@ class Enemy(pygame.sprite.Sprite):
         self.mask = pygame.mask.from_surface(self.image)
         self.spawn(pos)
 
+    def get_center(self):
+        return self.rect.x + self.rect.size[0] // 2, self.rect.y + self.rect.size[1] // 2
+
     def move(self, platforms, ladders, barrels, booms, is_gameover, screen, flags, x=0, y=0):
         """Метод для передвижения персонажа. Передаётся перемещение по осям X и Y"""
 
@@ -259,12 +265,33 @@ class Enemy(pygame.sprite.Sprite):
 
         for _ in range(*sorted((x, 0))):
             self.rect = self.rect.move(delta, 0)
+            stop = False
+
+            ladds = pygame.sprite.spritecollide(self, ladders, dokill=False)
+            for ladd in ladds:
+                if pygame.sprite.collide_mask(self, ladd):
+                    self.climbing = True
+                    stop = True
+                    break
+            if stop:
+                continue
 
             ss = pygame.sprite.spritecollide(self, platforms, dokill=False)
             for s in ss:
                 if pygame.sprite.collide_mask(self, s):
+                    self.rect = self.rect.move(0, -3)
+                    ss2 = pygame.sprite.spritecollide(self, platforms, dokill=False)
+                    for s2 in ss2:
+                        if pygame.sprite.collide_mask(self, s):
+                            self.rect = self.rect.move(0, 3)
+                            break
+                    else:
+                        continue
                     self.rect = self.rect.move(-delta, 0)
+                    stop = True
                     break
+            if stop:
+                break
 
         delta = 1 if y > 0 else -1
         stop = False
@@ -281,16 +308,34 @@ class Enemy(pygame.sprite.Sprite):
                 if stop:
                     break
 
-            if pygame.sprite.spritecollideany(self, ladders) and not self.climbing:
-                break
+            if not self.climbing:
+                ladds = pygame.sprite.spritecollide(self, ladders, dokill=False)
+                for ladd in ladds:
+                    if pygame.sprite.collide_mask(self, ladd):
+                        self.climbing = True
+                        stop = True
+                        break
+                if stop:
+                    break
 
-        ss = pygame.sprite.spritecollide(self, ladders, dokill=False)
-        for s in ss:
-            if pygame.sprite.collide_mask(self, s):
+        ladds = pygame.sprite.spritecollide(self, ladders, dokill=False)
+        for ladd in ladds:
+            if pygame.sprite.collide_mask(self, ladd):
                 self.climbing = True
                 break
-        else:
-            self.climbing = False
+            else:
+                self.climbing = False
+
+        if not self.climbing:
+            plt = pygame.sprite.spritecollide(self, platforms, dokill=False)
+            for pl in plt:
+                if pygame.sprite.collide_mask(self, pl):
+                    if self.get_center()[1] > pl.get_center()[1] and pl.angle in (0, 180):
+                        while pygame.sprite.collide_mask(self, pl) and not self.climbing:
+                            self.rect.y += 1
+                    else:
+                        while pygame.sprite.collide_mask(self, pl) and not self.climbing:
+                            self.rect.y -= 1
 
         bs = pygame.sprite.spritecollide(self, barrels, dokill=False)
         for b in bs:
@@ -356,7 +401,6 @@ class Enemy(pygame.sprite.Sprite):
 
     def spawn(self, pos):
         self.rect.x, self.rect.y = pos[0], pos[1] - CHARACTER_SIZE[1]
-
 
 class Nothing(pygame.sprite.Sprite):
     """Класс используемый для тестирования всяких штук"""

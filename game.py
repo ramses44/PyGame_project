@@ -6,21 +6,27 @@ import time
 from threading import Thread
 import sqlite3
 
+# Импортируем настройки
+with open("config.txt") as config:
+    settings = {
+        i.split("=")[0].strip(): eval(i.split("=")[1])if i != '\n' and i[0] != '#' else None for i in config.readlines()
+    }
+
 # Задаём все необходимые константы
-CHARACTER_SIZE = 45, 75
-PLATFORM_SIZE = 130, 17
-LADDER_SIZE = 30, 100
-BARREL_SIZE = 40, 40
-FALLING_SPEED = 2  # Скорость падения (pixels/tick)
+CHARACTER_SIZE = settings.get("CHARACTER_SIZE", (45, 75))
+PLATFORM_SIZE = settings.get("PLATFORM_SIZE", (130, 17))
+LADDER_SIZE = settings.get("LADDER_SIZE", (30, 100))
+BARREL_SIZE = settings.get("BARREL_SIZE", (40, 40))
+FALLING_SPEED = settings.get("FALLING_SPEED", 2)  # Скорость падения (pixels/tick)
 BARREL_ROTATION = 3
 LEFT, RIGHT = False, True  # Нужны для разворота персонажа направо/налево
-BACKGROUND_COLOR = [255] * 3
-FPS = 45
-JUMP_HEIGHT = 100
-BARRELS_SPAWN_FREQUENCY = 10
-WINDOW_SIZE = [(1000, 600), ]  # pygame.FULLSCREEN]
-DEAD_HIGH = 600
-JUMP_PER_TICK = 15
+BACKGROUND_COLOR = settings.get("BACKGROUND_COLOR", [255] * 3)
+FPS = settings.get("FPS", 45)
+JUMP_HEIGHT = settings.get("JUMP_HEIGHT", 100)
+BARRELS_SPAWN_FREQUENCY = settings.get("BARRELS_SPAWN_FREQUENCY", 10)
+WINDOW_SIZE = settings.get("WINDOW_SIZE", [(1000, 600), ])  # pygame.FULLSCREEN]
+DEAD_HIGH = settings.get("DEAD_HIGH", 600)
+JUMP_PER_TICK = settings.get("JUMP_PER_TICK", 15)
 
 
 def load_image(name, colorkey=None):
@@ -235,10 +241,6 @@ class Barrel(pygame.sprite.Sprite):
 class Enemy(pygame.sprite.Sprite):
     """Класс персонажа, которым собственно и управляет игрок))"""
 
-    # Подгружаем 2 состояния персонажа (с разным положением ног для имитации шагов)
-    # image1 = load_image("character_1.png")
-    # image2 = load_image("character_2.png")
-
     def __init__(self, group, pos):
         super().__init__(group)
         self.image1 = load_image("skin_1_1.png")
@@ -324,8 +326,8 @@ class Enemy(pygame.sprite.Sprite):
             if pygame.sprite.collide_mask(self, ladd):
                 self.climbing = True
                 break
-            else:
-                self.climbing = False
+        else:
+            self.climbing = False
 
         if not self.climbing:
             plt = pygame.sprite.spritecollide(self, platforms, dokill=False)
@@ -402,6 +404,7 @@ class Enemy(pygame.sprite.Sprite):
 
     def spawn(self, pos):
         self.rect.x, self.rect.y = pos[0], pos[1] - CHARACTER_SIZE[1]
+
 
 class Nothing(pygame.sprite.Sprite):
     """Класс используемый для тестирования всяких штук"""
